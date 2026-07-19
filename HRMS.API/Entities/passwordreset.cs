@@ -6,8 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.API.Entities;
 
-[Table("passwordreset")]
-public partial class passwordreset
+public partial class PasswordReset
 {
     [Key]
     public int passwordresetid { get; set; }
@@ -26,6 +25,6 @@ public partial class passwordreset
     public DateTime? createddate { get; set; }
 
     [ForeignKey("userid")]
-    [InverseProperty("passwordresets")]
-    public virtual User user { get; set; } = null!;
+    [InverseProperty("PasswordResets")]
+    public virtual AppUser user { get; set; } = null!;
 }

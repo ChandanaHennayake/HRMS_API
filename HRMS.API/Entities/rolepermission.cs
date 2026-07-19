@@ -6,8 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.API.Entities;
 
-[Table("rolepermission")]
-public partial class rolepermission
+public partial class RolePermission
 {
     [Key]
     public int rolepermissionid { get; set; }
@@ -27,10 +26,10 @@ public partial class rolepermission
     public bool? canapprove { get; set; }
 
     [ForeignKey("permissionid")]
-    [InverseProperty("rolepermissions")]
-    public virtual permission permission { get; set; } = null!;
+    [InverseProperty("RolePermissions")]
+    public virtual Permission permission { get; set; } = null!;
 
     [ForeignKey("roleid")]
-    [InverseProperty("rolepermissions")]
-    public virtual role role { get; set; } = null!;
+    [InverseProperty("RolePermissions")]
+    public virtual Role role { get; set; } = null!;
 }

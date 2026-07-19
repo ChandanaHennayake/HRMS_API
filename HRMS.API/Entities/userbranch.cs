@@ -6,8 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.API.Entities;
 
-[Table("userbranch")]
-public partial class userbranch
+public partial class UserBranch
 {
     [Key]
     public int userbranchid { get; set; }
@@ -17,10 +16,10 @@ public partial class userbranch
     public int branchid { get; set; }
 
     [ForeignKey("branchid")]
-    [InverseProperty("userbranches")]
-    public virtual branch branch { get; set; } = null!;
+    [InverseProperty("UserBranches")]
+    public virtual Branch branch { get; set; } = null!;
 
     [ForeignKey("userid")]
-    [InverseProperty("userbranches")]
-    public virtual User user { get; set; } = null!;
+    [InverseProperty("UserBranches")]
+    public virtual AppUser user { get; set; } = null!;
 }

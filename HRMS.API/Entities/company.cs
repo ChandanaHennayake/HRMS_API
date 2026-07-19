@@ -6,9 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.API.Entities;
 
-[Table("company")]
 [Index("companycode", Name = "company_companycode_key", IsUnique = true)]
-public partial class company
+public partial class Company
 {
     [Key]
     public int companyid { get; set; }
@@ -39,12 +38,12 @@ public partial class company
 
     public int? modifiedby { get; set; }
 
-    [InverseProperty("company")]
-    public virtual ICollection<User> Users { get; set; } = new List<User>();
+    [InverseProperty("Company")]
+    public virtual ICollection<AppUser> AppUsers { get; set; } = new List<AppUser>();
 
     [InverseProperty("company")]
-    public virtual ICollection<branch> branches { get; set; } = new List<branch>();
+    public virtual ICollection<Branch> Branches { get; set; } = new List<Branch>();
 
     [InverseProperty("company")]
-    public virtual ICollection<role> roles { get; set; } = new List<role>();
+    public virtual ICollection<Role> Roles { get; set; } = new List<Role>();
 }

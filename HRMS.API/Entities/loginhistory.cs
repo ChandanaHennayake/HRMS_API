@@ -6,8 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.API.Entities;
 
-[Table("loginhistory")]
-public partial class loginhistory
+public partial class LoginHistory
 {
     [Key]
     public int loginhistoryid { get; set; }
@@ -32,6 +31,6 @@ public partial class loginhistory
     public string? failurereason { get; set; }
 
     [ForeignKey("userid")]
-    [InverseProperty("loginhistories")]
-    public virtual User? user { get; set; }
+    [InverseProperty("LoginHistories")]
+    public virtual AppUser? user { get; set; }
 }

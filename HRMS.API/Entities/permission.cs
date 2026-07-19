@@ -6,8 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.API.Entities;
 
-[Table("permission")]
-public partial class permission
+public partial class Permission
 {
     [Key]
     public int permissionid { get; set; }
@@ -22,5 +21,5 @@ public partial class permission
     public string? description { get; set; }
 
     [InverseProperty("permission")]
-    public virtual ICollection<rolepermission> rolepermissions { get; set; } = new List<rolepermission>();
+    public virtual ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
 }

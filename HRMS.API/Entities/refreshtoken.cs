@@ -6,8 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.API.Entities;
 
-[Table("refreshtoken")]
-public partial class refreshtoken
+public partial class RefreshToken
 {
     [Key]
     public int refreshtokenid { get; set; }
@@ -25,6 +24,6 @@ public partial class refreshtoken
     public DateTime? createddate { get; set; }
 
     [ForeignKey("userid")]
-    [InverseProperty("refreshtokens")]
-    public virtual User user { get; set; } = null!;
+    [InverseProperty("RefreshTokens")]
+    public virtual AppUser user { get; set; } = null!;
 }

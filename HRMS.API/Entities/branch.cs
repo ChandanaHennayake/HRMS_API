@@ -6,8 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.API.Entities;
 
-[Table("branch")]
-public partial class branch
+public partial class Branch
 {
     [Key]
     public int branchid { get; set; }
@@ -30,13 +29,13 @@ public partial class branch
     [Column(TypeName = "timestamp without time zone")]
     public DateTime? createddate { get; set; }
 
+    [InverseProperty("Branch")]
+    public virtual ICollection<AppUser> AppUsers { get; set; } = new List<AppUser>();
+
     [InverseProperty("branch")]
-    public virtual ICollection<User> Users { get; set; } = new List<User>();
+    public virtual ICollection<UserBranch> UserBranches { get; set; } = new List<UserBranch>();
 
     [ForeignKey("companyid")]
-    [InverseProperty("branches")]
-    public virtual company company { get; set; } = null!;
-
-    [InverseProperty("branch")]
-    public virtual ICollection<userbranch> userbranches { get; set; } = new List<userbranch>();
+    [InverseProperty("Branches")]
+    public virtual Company company { get; set; } = null!;
 }

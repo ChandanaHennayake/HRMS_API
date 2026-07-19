@@ -6,8 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.API.Entities;
 
-[Table("role")]
-public partial class role
+public partial class Role
 {
     [Key]
     public int roleid { get; set; }
@@ -27,13 +26,13 @@ public partial class role
     [Column(TypeName = "timestamp without time zone")]
     public DateTime? createddate { get; set; }
 
+    [InverseProperty("Role")]
+    public virtual ICollection<AppUser> AppUsers { get; set; } = new List<AppUser>();
+
     [InverseProperty("role")]
-    public virtual ICollection<User> Users { get; set; } = new List<User>();
+    public virtual ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
 
     [ForeignKey("companyid")]
-    [InverseProperty("roles")]
-    public virtual company? company { get; set; }
-
-    [InverseProperty("role")]
-    public virtual ICollection<rolepermission> rolepermissions { get; set; } = new List<rolepermission>();
+    [InverseProperty("Roles")]
+    public virtual Company? company { get; set; }
 }
