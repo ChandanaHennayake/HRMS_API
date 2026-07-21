@@ -455,5 +455,76 @@ namespace HRMS.API.Service.Attendance
                     attendance.Status
             };
         }
+
+        public async Task FinalizeDailyAttendanceAsync(
+    DateOnly date)
+{
+    // Sunday - no work
+    if (date.DayOfWeek == DayOfWeek.Sunday)
+    {
+        return;
+    }
+
+    var employees =
+        await _employeeRepository.GetAllActiveEntitiesAsync();
+
+    foreach (var employee in employees)
+    {
+        var attendance =
+            await _attendanceRepository
+                .GetTodayAttendanceAsync(
+                    employee.Id,
+                    date);
+
+        // Already checked in / attendance exists
+        if (attendance != null)
+        {
+            continue;
+        }
+
+        var hasApprovedLeave =
+            await _leaveRepository
+                .HasApprovedLeaveAsync(
+                    employee.Id,
+                    date);
+
+        var newAttendance = new AttendanceEntity
+        {
+            EmployeeId = employee.Id,
+
+            AttendanceDate = date,
+
+            CheckInTime = null,
+
+            CheckOutTime = null,
+
+            WorkedMinutes = 0,
+
+            LateMinutes = 0,
+
+            EarlyDepartureMinutes = 0,
+
+            OTMinutes = 0,
+
+            IsLate = false,
+
+            IsEarlyDeparture = false,
+
+            Status = hasApprovedLeave
+                ? (short)AttendanceStatus.OnLeave
+                : (short)AttendanceStatus.Absent,
+
+            CreatedAt = DateTime.Now
+        };
+
+        await _attendanceRepository
+            .AddAsync(newAttendance);
+    }
+
+    await _attendanceRepository
+        .SaveChangesAsync();
+}
+
+
     }
 }

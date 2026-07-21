@@ -14,5 +14,7 @@ namespace HRMS.API.Service.Attendance
 
         Task<AttendanceResponseDto?> GetTodayAttendanceAsync(
             long employeeId);
+
+        Task FinalizeDailyAttendanceAsync(DateOnly date);
     }
 }

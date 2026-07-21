@@ -1,13 +1,15 @@
+using HRMS.API.BackgroundServices;
 using HRMS.API.Data;
 using HRMS.API.Interfaces.Repositories;
 using HRMS.API.Interfaces.Services;
 using HRMS.API.Repositories;
 using HRMS.API.Repository.Attendance;
-
+using HRMS.API.Repository.Leave;
 using HRMS.API.Repository.UserDetails;
 using HRMS.API.Service.Attendance;
 using HRMS.API.Service.Authentication;
 using HRMS.API.Service.Branch;
+using HRMS.API.Service.Leave;
 using HRMS.API.Service.User;
 using HRMS.API.Services;
 using Microsoft.EntityFrameworkCore;
@@ -39,7 +41,13 @@ builder.Services.AddScoped< IBranchRepository,BranchRepository>();
 builder.Services.AddScoped< IAttendanceRepository, AttendanceRepository>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 
+builder.Services.AddScoped<
+    ILeaveRepository,
+    LeaveRepository>();
 
+builder.Services.AddScoped<
+    ILeaveService,
+    LeaveService>();
 
 builder.Services.AddScoped<
     IBranchRepository,
@@ -48,6 +56,9 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IBranchService,
     BranchService>();
+
+
+builder.Services.AddHostedService<DailyAttendanceWorker>();
 
 var app = builder.Build();
 

@@ -86,4 +86,7 @@ public partial class Employee
     [ForeignKey("EmploymentTypeId")]
     [InverseProperty("Employees")]
     public virtual EmploymentType? EmploymentType { get; set; }
+
+    [InverseProperty("Employee")]
+    public virtual ICollection<LeaveRequest> LeaveRequests { get; set; } = new List<LeaveRequest>();
 }

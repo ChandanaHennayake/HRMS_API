@@ -32,6 +32,12 @@ public partial class DefaultContext : DbContext
 
     public virtual DbSet<EmploymentType> EmploymentTypes { get; set; }
 
+    public virtual DbSet<Holiday> Holidays { get; set; }
+
+    public virtual DbSet<LeaveRequest> LeaveRequests { get; set; }
+
+    public virtual DbSet<LeaveType> LeaveTypes { get; set; }
+
     public virtual DbSet<LoginHistory> LoginHistories { get; set; }
 
     public virtual DbSet<PasswordReset> PasswordResets { get; set; }
@@ -154,6 +160,40 @@ public partial class DefaultContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+        });
+
+        modelBuilder.Entity<Holiday>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("Holiday_pkey");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+        });
+
+        modelBuilder.Entity<LeaveRequest>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("LeaveRequest_pkey");
+
+            entity.Property(e => e.AppliedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.Status).HasDefaultValue((short)0);
+
+            entity.HasOne(d => d.Employee).WithMany(p => p.LeaveRequests)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LeaveRequest_Employee");
+
+            entity.HasOne(d => d.LeaveType).WithMany(p => p.LeaveRequests)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LeaveRequest_LeaveType");
+        });
+
+        modelBuilder.Entity<LeaveType>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("LeaveType_pkey");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsPaid).HasDefaultValue(true);
         });
 
         modelBuilder.Entity<LoginHistory>(entity =>

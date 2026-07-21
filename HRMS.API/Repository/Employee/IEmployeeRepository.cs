@@ -12,6 +12,9 @@ namespace HRMS.API.Interfaces.Repositories
         Task<EmployeeDto?> GetByIdAsync(long id);
 
         Task<Employee?> GetEntityByIdAsync(long id);
+       
+        Task<IEnumerable<Employee>>
+           GetAllActiveEntitiesAsync();
 
         Task<bool> EmployeeCodeExistsAsync(
             long companyId,

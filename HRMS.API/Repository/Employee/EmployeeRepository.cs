@@ -308,6 +308,18 @@ namespace HRMS.API.Repositories
         }
 
 
+        public async Task<IEnumerable<Employee>>
+    GetAllActiveEntitiesAsync()
+        {
+            return await _context.Employees
+                .AsNoTracking()
+                .Where(x =>
+                    x.IsActive &&
+                    !x.IsDeleted)
+                .ToListAsync();
+        }
+
+
         // =========================================================
         // DELETE - SOFT DELETE
         // =========================================================
