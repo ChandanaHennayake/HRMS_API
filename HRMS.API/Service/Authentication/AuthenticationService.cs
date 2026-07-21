@@ -93,7 +93,7 @@ namespace HRMS.API.Service.Authentication
                     $"{user.FirstName} {user.LastName}".Trim(),
 
                 RoleId = user.RoleId,
-                Role = user.Role?.Rolename ?? string.Empty,
+                Role = user.Role?.rolename ?? string.Empty,
 
                 CompanyId = user.CompanyId,
                 BranchId = user.BranchId,

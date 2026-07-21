@@ -47,7 +47,7 @@ namespace HRMS.API.Service.Authentication
 
                 new Claim(
                     ClaimTypes.Role,
-                    user.Role?.Rolename ?? string.Empty),
+                    user.Role?.rolename ?? string.Empty),
 
                 new Claim(
                     "CompanyId",

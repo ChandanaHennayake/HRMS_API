@@ -18,6 +18,8 @@ public partial class DefaultContext : DbContext
 
     public virtual DbSet<AppUser> AppUsers { get; set; }
 
+    public virtual DbSet<Attendance> Attendances { get; set; }
+
     public virtual DbSet<Branch> Branches { get; set; }
 
     public virtual DbSet<Company> Companies { get; set; }
@@ -71,11 +73,30 @@ public partial class DefaultContext : DbContext
                 .HasConstraintName("User_roleid_fkey");
         });
 
+        modelBuilder.Entity<Attendance>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("Attendance_pkey");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.EarlyDepartureMinutes).HasDefaultValue(0);
+            entity.Property(e => e.IsEarlyDeparture).HasDefaultValue(false);
+            entity.Property(e => e.IsLate).HasDefaultValue(false);
+            entity.Property(e => e.LateMinutes).HasDefaultValue(0);
+            entity.Property(e => e.OTMinutes).HasDefaultValue(0);
+            entity.Property(e => e.Status).HasDefaultValue(1);
+            entity.Property(e => e.WorkedMinutes).HasDefaultValue(0);
+
+            entity.HasOne(d => d.Employee).WithMany(p => p.Attendances)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Attendance_Employee");
+        });
+
         modelBuilder.Entity<Branch>(entity =>
         {
             entity.HasKey(e => e.branchid).HasName("branch_pkey");
 
             entity.Property(e => e.branchid).HasDefaultValueSql("nextval('branch_branchid_seq'::regclass)");
+            entity.Property(e => e.GeofenceRadiusMeters).HasDefaultValue(100);
             entity.Property(e => e.createddate).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.isactive).HasDefaultValue(true);
 

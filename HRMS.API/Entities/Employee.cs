@@ -72,6 +72,9 @@ public partial class Employee
 
     public long? UpdatedBy { get; set; }
 
+    [InverseProperty("Employee")]
+    public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
+
     [ForeignKey("DepartmentId")]
     [InverseProperty("Employees")]
     public virtual Department? Department { get; set; }

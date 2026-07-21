@@ -77,7 +77,7 @@ namespace HRMS.API.Service.User
                 Username = x.Username,
                 Email = x.Email,
                 FullName = $"{x.FirstName} {x.LastName}".Trim(),
-                Role = x.Role?.Rolename ?? string.Empty,
+                Role = x.Role?.rolename ?? string.Empty,
                 IsActive = x.IsActive ?? false
             }).ToList();
         }
@@ -95,7 +95,7 @@ namespace HRMS.API.Service.User
                 Username = user.Username,
                 Email = user.Email,
                 FullName = $"{user.FirstName} {user.LastName}".Trim(),
-                Role = user.Role?.Rolename ?? string.Empty,
+                Role = user.Role?.rolename ?? string.Empty,
                 IsActive = user.IsActive ?? false
             };
         }

@@ -29,6 +29,14 @@ public partial class Branch
     [Column(TypeName = "timestamp without time zone")]
     public DateTime? createddate { get; set; }
 
+    [Precision(10, 7)]
+    public decimal? Latitude { get; set; }
+
+    [Precision(10, 7)]
+    public decimal? Longitude { get; set; }
+
+    public int GeofenceRadiusMeters { get; set; }
+
     [InverseProperty("Branch")]
     public virtual ICollection<AppUser> AppUsers { get; set; } = new List<AppUser>();
 
