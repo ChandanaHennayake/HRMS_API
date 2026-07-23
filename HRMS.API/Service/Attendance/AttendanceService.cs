@@ -1,8 +1,9 @@
 ﻿using ABANS_BAN.DTOs.Attendance;
+using HRMS.API.Enums;
 using HRMS.API.Helpers;
 using HRMS.API.Interfaces.Repositories;
 using HRMS.API.Repository.Attendance;
-
+using HRMS.API.Repository.Leave;
 using AttendanceEntity = HRMS.API.Entities.Attendance;
 
 namespace HRMS.API.Service.Attendance
@@ -12,15 +13,20 @@ namespace HRMS.API.Service.Attendance
         private readonly IAttendanceRepository _attendanceRepository;
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IBranchRepository _branchRepository;
+        private readonly ILeaveRepository _leaveRepository;
+
+
 
         public AttendanceService(
             IAttendanceRepository attendanceRepository,
             IEmployeeRepository employeeRepository,
-            IBranchRepository branchRepository)
+            IBranchRepository branchRepository ,
+               ILeaveRepository leaveRepository)
         {
             _attendanceRepository = attendanceRepository;
             _employeeRepository = employeeRepository;
             _branchRepository = branchRepository;
+            _leaveRepository = leaveRepository;
         }
 
 

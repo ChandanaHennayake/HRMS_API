@@ -4,11 +4,13 @@ using HRMS.API.Interfaces.Repositories;
 using HRMS.API.Interfaces.Services;
 using HRMS.API.Repositories;
 using HRMS.API.Repository.Attendance;
+using HRMS.API.Repository.Holiday;
 using HRMS.API.Repository.Leave;
 using HRMS.API.Repository.UserDetails;
 using HRMS.API.Service.Attendance;
 using HRMS.API.Service.Authentication;
 using HRMS.API.Service.Branch;
+using HRMS.API.Service.Holiday;
 using HRMS.API.Service.Leave;
 using HRMS.API.Service.User;
 using HRMS.API.Services;
@@ -57,6 +59,15 @@ builder.Services.AddScoped<
     IBranchService,
     BranchService>();
 
+
+
+builder.Services.AddScoped<
+    IHolidayRepository,
+    HolidayRepository>();
+
+builder.Services.AddScoped<
+    IHolidayService,
+    HolidayService>();
 
 builder.Services.AddHostedService<DailyAttendanceWorker>();
 
