@@ -1,6 +1,6 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="TextFile1.txt" />
+  </Folder>
   <Project Path="HRMS.API/HRMS.API.csproj" />
-  <Project Path="HRMS.Core/HRMS.Core.csproj" />
-  <Project Path="HRMS.Infrastructure/HRMS.Infrastructure.csproj" />
-  <Project Path="HRMS.Tests/HRMS.Tests.csproj" />
 </Solution>

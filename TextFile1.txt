@@ -1,0 +1,1 @@
+Scaffold-DbContext "Host=localhost;Port=5432;Database=ABANS_BAN;Username=postgres;Password=Nishantha@123" Npgsql.EntityFrameworkCore.PostgreSQL -Context DefaultContext -ContextDir Data -OutputDir Entities -DataAnnotations -UseDatabaseNames -Force
