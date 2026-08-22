@@ -59,6 +59,7 @@ namespace HRMS.API.Repository.UserDetails
                 .Include(x => x.Role)
                 .Include(x => x.Company)
                 .Include(x => x.Branch)
+               
                 .FirstOrDefaultAsync(x =>
                     x.Username == username);
         }

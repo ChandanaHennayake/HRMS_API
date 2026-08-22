@@ -69,6 +69,12 @@ builder.Services.AddScoped<
     IHolidayService,
     HolidayService>();
 
+
+builder.Services.AddScoped<ILeaveTypeRepository, LeaveTypeRepository>();
+builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
+
+
+
 builder.Services.AddHostedService<DailyAttendanceWorker>();
 
 var app = builder.Build();

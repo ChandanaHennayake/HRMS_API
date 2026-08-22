@@ -19,7 +19,6 @@ namespace HRMS.API.Service.Leave
             _employeeRepository = employeeRepository;
         }
 
-
         // =====================================================
         // APPLY LEAVE
         // =====================================================
@@ -47,7 +46,6 @@ namespace HRMS.API.Service.Leave
                     "Employee is inactive.");
             }
 
-
             // -------------------------------------------------
             // VALIDATE DATE
             // -------------------------------------------------
@@ -57,7 +55,6 @@ namespace HRMS.API.Service.Leave
                 throw new Exception(
                     "From date cannot be greater than to date.");
             }
-
 
             // -------------------------------------------------
             // PREVENT PAST LEAVE
@@ -71,7 +68,6 @@ namespace HRMS.API.Service.Leave
                 throw new Exception(
                     "Leave cannot be applied for a past date.");
             }
-
 
             // -------------------------------------------------
             // CHECK OVERLAPPING LEAVE
@@ -90,14 +86,10 @@ namespace HRMS.API.Service.Leave
                     "for the selected date range.");
             }
 
-
             // -------------------------------------------------
             // CALCULATE TOTAL DAYS
             //
-            // Initial implementation:
             // Sundays are not counted.
-            //
-            // Later we can also remove public holidays.
             // -------------------------------------------------
 
             decimal totalDays = 0;
@@ -112,17 +104,14 @@ namespace HRMS.API.Service.Leave
                     totalDays++;
                 }
 
-                currentDate =
-                    currentDate.AddDays(1);
+                currentDate = currentDate.AddDays(1);
             }
-
 
             if (totalDays <= 0)
             {
                 throw new Exception(
                     "Selected leave period contains no working days.");
             }
-
 
             // -------------------------------------------------
             // CREATE LEAVE REQUEST
@@ -159,14 +148,27 @@ namespace HRMS.API.Service.Leave
                         DateTime.Now
                 };
 
-
             await _leaveRepository
                 .CreateAsync(leaveRequest);
 
+            // -------------------------------------------------
+            // RELOAD WITH LEAVE TYPE
+            //
+            // CreateAsync does not automatically populate
+            // leaveRequest.LeaveType.
+            // -------------------------------------------------
 
-            return MapToDto(leaveRequest);
+            var createdLeave = await _leaveRepository
+                .GetByIdAsync(leaveRequest.Id);
+
+            if (createdLeave == null)
+            {
+                throw new Exception(
+                    "Unable to load created leave request.");
+            }
+
+            return MapToDto(createdLeave);
         }
-
 
         // =====================================================
         // GET EMPLOYEE LEAVE HISTORY
@@ -184,14 +186,11 @@ namespace HRMS.API.Service.Leave
                     "Employee not found.");
             }
 
-
             var leaves = await _leaveRepository
                 .GetEmployeeLeavesAsync(employeeId);
 
-
             return leaves.Select(MapToDto);
         }
-
 
         // =====================================================
         // GET ALL PENDING LEAVE REQUESTS
@@ -203,10 +202,8 @@ namespace HRMS.API.Service.Leave
             var leaves = await _leaveRepository
                 .GetPendingLeavesAsync();
 
-
             return leaves.Select(MapToDto);
         }
-
 
         // =====================================================
         // APPROVE LEAVE
@@ -222,13 +219,11 @@ namespace HRMS.API.Service.Leave
                 await _leaveRepository
                     .GetByIdAsync(leaveRequestId);
 
-
             if (leaveRequest == null)
             {
                 throw new Exception(
                     "Leave request not found.");
             }
-
 
             if (leaveRequest.Status !=
                 (short)LeaveRequestStatus.Pending)
@@ -236,7 +231,6 @@ namespace HRMS.API.Service.Leave
                 throw new Exception(
                     "Only pending leave requests can be approved.");
             }
-
 
             leaveRequest.Status =
                 (short)LeaveRequestStatus.Approved;
@@ -253,14 +247,21 @@ namespace HRMS.API.Service.Leave
             leaveRequest.UpdatedAt =
                 DateTime.Now;
 
-
             await _leaveRepository
                 .UpdateAsync(leaveRequest);
 
+            // Reload to make sure LeaveType is available
+            var updatedLeave = await _leaveRepository
+                .GetByIdAsync(leaveRequest.Id);
 
-            return MapToDto(leaveRequest);
+            if (updatedLeave == null)
+            {
+                throw new Exception(
+                    "Unable to load updated leave request.");
+            }
+
+            return MapToDto(updatedLeave);
         }
-
 
         // =====================================================
         // REJECT LEAVE
@@ -276,13 +277,11 @@ namespace HRMS.API.Service.Leave
                 await _leaveRepository
                     .GetByIdAsync(leaveRequestId);
 
-
             if (leaveRequest == null)
             {
                 throw new Exception(
                     "Leave request not found.");
             }
-
 
             if (leaveRequest.Status !=
                 (short)LeaveRequestStatus.Pending)
@@ -291,14 +290,12 @@ namespace HRMS.API.Service.Leave
                     "Only pending leave requests can be rejected.");
             }
 
-
             if (string.IsNullOrWhiteSpace(
                 request.Comment))
             {
                 throw new Exception(
                     "Comment is required when rejecting leave.");
             }
-
 
             leaveRequest.Status =
                 (short)LeaveRequestStatus.Rejected;
@@ -315,14 +312,21 @@ namespace HRMS.API.Service.Leave
             leaveRequest.UpdatedAt =
                 DateTime.Now;
 
-
             await _leaveRepository
                 .UpdateAsync(leaveRequest);
 
+            // Reload to make sure LeaveType is available
+            var updatedLeave = await _leaveRepository
+                .GetByIdAsync(leaveRequest.Id);
 
-            return MapToDto(leaveRequest);
+            if (updatedLeave == null)
+            {
+                throw new Exception(
+                    "Unable to load updated leave request.");
+            }
+
+            return MapToDto(updatedLeave);
         }
-
 
         // =====================================================
         // CANCEL LEAVE
@@ -337,31 +341,32 @@ namespace HRMS.API.Service.Leave
                 await _leaveRepository
                     .GetByIdAsync(leaveRequestId);
 
-
             if (leaveRequest == null)
             {
                 throw new Exception(
                     "Leave request not found.");
             }
 
+            // -------------------------------------------------
+            // EMPLOYEE CAN ONLY CANCEL OWN LEAVE
+            // -------------------------------------------------
 
-            // Employee can only cancel own leave
             if (leaveRequest.EmployeeId != employeeId)
             {
                 throw new Exception(
                     "You cannot cancel another employee's leave.");
             }
 
+            // -------------------------------------------------
+            // ONLY PENDING LEAVE CAN BE CANCELLED
+            // -------------------------------------------------
 
-            // Initial rule:
-            // Only Pending leave can be cancelled
             if (leaveRequest.Status !=
                 (short)LeaveRequestStatus.Pending)
             {
                 throw new Exception(
                     "Only pending leave requests can be cancelled.");
             }
-
 
             leaveRequest.Status =
                 (short)LeaveRequestStatus.Cancelled;
@@ -372,14 +377,21 @@ namespace HRMS.API.Service.Leave
             leaveRequest.UpdatedAt =
                 DateTime.Now;
 
-
             await _leaveRepository
                 .UpdateAsync(leaveRequest);
 
+            // Reload to make sure LeaveType is available
+            var updatedLeave = await _leaveRepository
+                .GetByIdAsync(leaveRequest.Id);
 
-            return MapToDto(leaveRequest);
+            if (updatedLeave == null)
+            {
+                throw new Exception(
+                    "Unable to load updated leave request.");
+            }
+
+            return MapToDto(updatedLeave);
         }
-
 
         // =====================================================
         // ENTITY -> DTO
@@ -398,6 +410,11 @@ namespace HRMS.API.Service.Leave
 
                 LeaveTypeId =
                     leave.LeaveTypeId,
+
+                // IMPORTANT:
+                // Get the name from the loaded LeaveType
+                LeaveType =
+                    leave.LeaveType?.Name ?? "",
 
                 FromDate =
                     leave.FromDate,
@@ -439,7 +456,6 @@ namespace HRMS.API.Service.Leave
                     leave.CancelledAt
             };
         }
-
 
         // =====================================================
         // STATUS NAME

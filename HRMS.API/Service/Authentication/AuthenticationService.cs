@@ -88,7 +88,7 @@ namespace HRMS.API.Service.Authentication
                 UserId = user.UserId,
                 Username = user.Username,
                 Email = user.Email,
-
+                EmployeeId = (int)user.EmployeeId,
                 FullName =
                     $"{user.FirstName} {user.LastName}".Trim(),
 

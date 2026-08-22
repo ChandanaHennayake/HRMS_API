@@ -8,12 +8,10 @@ namespace HRMS.API.Repository.Leave
     {
         private readonly DefaultContext _context;
 
-        public LeaveRepository(
-            DefaultContext context)
+        public LeaveRepository(DefaultContext context)
         {
             _context = context;
         }
-
 
         // =====================================================
         // CREATE
@@ -22,45 +20,39 @@ namespace HRMS.API.Repository.Leave
         public async Task<LeaveRequest> CreateAsync(
             LeaveRequest leaveRequest)
         {
-            await _context.LeaveRequests
-                .AddAsync(leaveRequest);
+            await _context.LeaveRequests.AddAsync(leaveRequest);
 
             await _context.SaveChangesAsync();
 
             return leaveRequest;
         }
 
-
         // =====================================================
         // GET BY ID
         // =====================================================
 
-        public async Task<LeaveRequest?> GetByIdAsync(
-            long id)
+        public async Task<LeaveRequest?> GetByIdAsync(long id)
         {
             return await _context.LeaveRequests
-                .FirstOrDefaultAsync(x =>
-                    x.Id == id);
+                .AsNoTracking()
+                .Include(x => x.LeaveType)
+                .FirstOrDefaultAsync(x => x.Id == id);
         }
-
 
         // =====================================================
         // EMPLOYEE LEAVE HISTORY
         // =====================================================
 
         public async Task<IEnumerable<LeaveRequest>>
-            GetEmployeeLeavesAsync(
-                long employeeId)
+            GetEmployeeLeavesAsync(long employeeId)
         {
             return await _context.LeaveRequests
                 .AsNoTracking()
-                .Where(x =>
-                    x.EmployeeId == employeeId)
-                .OrderByDescending(x =>
-                    x.AppliedAt)
+                .Include(x => x.LeaveType)
+                .Where(x => x.EmployeeId == employeeId)
+                .OrderByDescending(x => x.AppliedAt)
                 .ToListAsync();
         }
-
 
         // =====================================================
         // GET PENDING LEAVES
@@ -72,13 +64,11 @@ namespace HRMS.API.Repository.Leave
         {
             return await _context.LeaveRequests
                 .AsNoTracking()
-                .Where(x =>
-                    x.Status == 0)
-                .OrderByDescending(x =>
-                    x.AppliedAt)
+                .Include(x => x.LeaveType)
+                .Where(x => x.Status == 0)
+                .OrderByDescending(x => x.AppliedAt)
                 .ToListAsync();
         }
-
 
         // =====================================================
         // CHECK OVERLAPPING LEAVE
@@ -87,29 +77,23 @@ namespace HRMS.API.Repository.Leave
         // 1 = Approved
         // =====================================================
 
-        public async Task<bool>
-            HasOverlappingLeaveAsync(
-                long employeeId,
-                DateOnly fromDate,
-                DateOnly toDate)
+        public async Task<bool> HasOverlappingLeaveAsync(
+            long employeeId,
+            DateOnly fromDate,
+            DateOnly toDate)
         {
             return await _context.LeaveRequests
                 .AsNoTracking()
                 .AnyAsync(x =>
-
                     x.EmployeeId == employeeId &&
-
                     (
                         x.Status == 0 ||
                         x.Status == 1
                     ) &&
-
                     x.FromDate <= toDate &&
-
                     x.ToDate >= fromDate
                 );
         }
-
 
         // =====================================================
         // CHECK APPROVED LEAVE FOR DATE
@@ -117,25 +101,19 @@ namespace HRMS.API.Repository.Leave
         // Used when daily attendance is finalized.
         // =====================================================
 
-        public async Task<bool>
-            HasApprovedLeaveAsync(
-                long employeeId,
-                DateOnly date)
+        public async Task<bool> HasApprovedLeaveAsync(
+            long employeeId,
+            DateOnly date)
         {
             return await _context.LeaveRequests
                 .AsNoTracking()
                 .AnyAsync(x =>
-
                     x.EmployeeId == employeeId &&
-
                     x.Status == 1 &&
-
                     x.FromDate <= date &&
-
                     x.ToDate >= date
                 );
         }
-
 
         // =====================================================
         // UPDATE
@@ -145,8 +123,7 @@ namespace HRMS.API.Repository.Leave
         public async Task UpdateAsync(
             LeaveRequest leaveRequest)
         {
-            _context.LeaveRequests
-                .Update(leaveRequest);
+            _context.LeaveRequests.Update(leaveRequest);
 
             await _context.SaveChangesAsync();
         }
