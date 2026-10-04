@@ -73,6 +73,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<ILeaveTypeRepository, LeaveTypeRepository>();
 builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
 
+// Master lookups (departments, designations, employment types, roles, branches)
+builder.Services.AddScoped<ILookupRepository, LookupRepository>();
+builder.Services.AddScoped<ILookupService, LookupService>();
+
 
 
 builder.Services.AddHostedService<DailyAttendanceWorker>();
