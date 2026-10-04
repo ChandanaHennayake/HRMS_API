@@ -1,6 +1,7 @@
 ﻿using ABANS_BAN.DTOs.Attendance;
 using HRMS.API.Service.Attendance;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace HRMS.API.Controllers
 {
@@ -123,5 +124,73 @@ namespace HRMS.API.Controllers
                 });
             }
         }
+
+
+        [HttpGet("history")]
+        public async Task<IActionResult> GetAttendanceHistory(
+           [FromQuery] long? employeeId,
+           [FromQuery] DateOnly? fromDate,
+           [FromQuery] DateOnly? toDate)
+        {
+            try
+            {
+                // ---------------------------------------------
+                // GET LOGGED-IN EMPLOYEE ID
+                // ---------------------------------------------
+
+                var employeeIdClaim =
+                    User.FindFirst("EmployeeId")?.Value
+                    ??
+                    User.FindFirst(
+                        ClaimTypes.NameIdentifier)?.Value;
+
+                if (!long.TryParse(
+                        employeeIdClaim,
+                        out var loggedInEmployeeId))
+                {
+                    return Unauthorized(
+                        new
+                        {
+                            message =
+                                "Employee ID not found in token."
+                        });
+                }
+
+
+                // ---------------------------------------------
+                // CHECK ADMIN
+                // ---------------------------------------------
+
+                var isAdmin =
+                    User.IsInRole("Admin") ||
+                    User.IsInRole("SuperAdmin");
+
+
+                // ---------------------------------------------
+                // GET HISTORY
+                // ---------------------------------------------
+
+                var result =
+                    await _attendanceService
+                        .GetAttendanceHistoryAsync(
+                            loggedInEmployeeId,
+                            isAdmin,
+                            employeeId,
+                            fromDate,
+                            toDate);
+
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(
+                    new
+                    {
+                        message = ex.Message
+                    });
+            }
+        }
+
     }
 }

@@ -20,7 +20,7 @@ namespace HRMS.API.Service.Attendance
         public AttendanceService(
             IAttendanceRepository attendanceRepository,
             IEmployeeRepository employeeRepository,
-            IBranchRepository branchRepository ,
+            IBranchRepository branchRepository,
                ILeaveRepository leaveRepository)
         {
             _attendanceRepository = attendanceRepository;
@@ -464,72 +464,128 @@ namespace HRMS.API.Service.Attendance
 
         public async Task FinalizeDailyAttendanceAsync(
     DateOnly date)
-{
-    // Sunday - no work
-    if (date.DayOfWeek == DayOfWeek.Sunday)
-    {
-        return;
-    }
-
-    var employees =
-        await _employeeRepository.GetAllActiveEntitiesAsync();
-
-    foreach (var employee in employees)
-    {
-        var attendance =
-            await _attendanceRepository
-                .GetTodayAttendanceAsync(
-                    employee.Id,
-                    date);
-
-        // Already checked in / attendance exists
-        if (attendance != null)
         {
-            continue;
+            // Sunday - no work
+            if (date.DayOfWeek == DayOfWeek.Sunday)
+            {
+                return;
+            }
+
+            var employees =
+                await _employeeRepository.GetAllActiveEntitiesAsync();
+
+            foreach (var employee in employees)
+            {
+                var attendance =
+                    await _attendanceRepository
+                        .GetTodayAttendanceAsync(
+                            employee.Id,
+                            date);
+
+                // Already checked in / attendance exists
+                if (attendance != null)
+                {
+                    continue;
+                }
+
+                var hasApprovedLeave =
+                    await _leaveRepository
+                        .HasApprovedLeaveAsync(
+                            employee.Id,
+                            date);
+
+                var newAttendance = new AttendanceEntity
+                {
+                    EmployeeId = employee.Id,
+
+                    AttendanceDate = date,
+
+                    CheckInTime = null,
+
+                    CheckOutTime = null,
+
+                    WorkedMinutes = 0,
+
+                    LateMinutes = 0,
+
+                    EarlyDepartureMinutes = 0,
+
+                    OTMinutes = 0,
+
+                    IsLate = false,
+
+                    IsEarlyDeparture = false,
+
+                    Status = hasApprovedLeave
+                        ? (short)AttendanceStatus.OnLeave
+                        : (short)AttendanceStatus.Absent,
+
+                    CreatedAt = DateTime.Now
+                };
+
+                await _attendanceRepository
+                    .AddAsync(newAttendance);
+            }
+
+            await _attendanceRepository
+                .SaveChangesAsync();
         }
 
-        var hasApprovedLeave =
-            await _leaveRepository
-                .HasApprovedLeaveAsync(
-                    employee.Id,
-                    date);
+        // =========================================================
+        // GET ATTENDANCE HISTORY
+        // =========================================================
 
-        var newAttendance = new AttendanceEntity
+        public async Task<List<AttendanceHistoryResponseDto>>
+            GetAttendanceHistoryAsync(
+                long loggedInEmployeeId,
+                bool isAdmin,
+                long? employeeId,
+                DateOnly? fromDate,
+                DateOnly? toDate)
         {
-            EmployeeId = employee.Id,
+            // -----------------------------------------------------
+            // VALIDATE DATE RANGE
+            // -----------------------------------------------------
 
-            AttendanceDate = date,
+            if (fromDate.HasValue &&
+                toDate.HasValue &&
+                fromDate.Value > toDate.Value)
+            {
+                throw new Exception(
+                    "From date cannot be greater than To date.");
+            }
 
-            CheckInTime = null,
 
-            CheckOutTime = null,
+            // -----------------------------------------------------
+            // EMPLOYEE
+            //
+            // Employee is ONLY allowed to see own attendance.
+            // Ignore employeeId supplied by client.
+            // -----------------------------------------------------
 
-            WorkedMinutes = 0,
+            if (!isAdmin)
+            {
+                employeeId = loggedInEmployeeId;
+            }
 
-            LateMinutes = 0,
 
-            EarlyDepartureMinutes = 0,
+            // -----------------------------------------------------
+            // DEFAULT DATE
+            //
+            // If no dates are supplied, repository/SP will use
+            // CURRENT_DATE.
+            // -----------------------------------------------------
 
-            OTMinutes = 0,
+            var history =
+                await _attendanceRepository
+                    .GetAttendanceHistoryAsync(
+                        employeeId,
+                        fromDate,
+                        toDate);
 
-            IsLate = false,
 
-            IsEarlyDeparture = false,
-
-            Status = hasApprovedLeave
-                ? (short)AttendanceStatus.OnLeave
-                : (short)AttendanceStatus.Absent,
-
-            CreatedAt = DateTime.Now
-        };
-
-        await _attendanceRepository
-            .AddAsync(newAttendance);
-    }
-
-    await _attendanceRepository
-        .SaveChangesAsync();
-}
+            return history;
+        }
 
 
     }

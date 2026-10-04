@@ -16,5 +16,13 @@ namespace HRMS.API.Service.Attendance
             long employeeId);
 
         Task FinalizeDailyAttendanceAsync(DateOnly date);
+
+        Task<List<AttendanceHistoryResponseDto>>
+        GetAttendanceHistoryAsync(
+            long loggedInEmployeeId,
+            bool isAdmin,
+            long? employeeId,
+            DateOnly? fromDate,
+            DateOnly? toDate);
     }
 }

@@ -1,4 +1,5 @@
-﻿using AttendanceEntity = HRMS.API.Entities.Attendance;
+﻿using ABANS_BAN.DTOs.Attendance;
+using AttendanceEntity = HRMS.API.Entities.Attendance;
 
 namespace HRMS.API.Repository.Attendance
 {
@@ -15,5 +16,11 @@ namespace HRMS.API.Repository.Attendance
         void Update(AttendanceEntity attendance);
 
         Task<int> SaveChangesAsync();
+
+        Task<List<AttendanceHistoryResponseDto>>
+            GetAttendanceHistoryAsync(
+                long? employeeId,
+                DateOnly? fromDate,
+                DateOnly? toDate);
     }
 }
