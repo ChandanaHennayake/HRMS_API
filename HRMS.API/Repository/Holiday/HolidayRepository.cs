@@ -1,4 +1,4 @@
-﻿using HRMS.API.Data;
+using HRMS.API.Data;
 using HRMS.API.DTOs.Holiday;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,11 +35,28 @@ namespace HRMS.API.Repository.Holiday
         // GET ALL
         // =====================================================
 
-        public async Task<IEnumerable<HolidayDto>> GetAllAsync()
+        public async Task<IEnumerable<HolidayDto>> GetAllAsync(
+            long? companyId = null,
+            int? year = null)
         {
-            return await _context.Holidays
+            var query = _context.Holidays
                 .AsNoTracking()
-                .OrderByDescending(x => x.HolidayDate)
+                .Where(x => x.IsActive);
+
+            if (companyId.HasValue && companyId.Value > 0)
+            {
+                query = query.Where(x => x.CompanyId == companyId.Value);
+            }
+
+            if (year.HasValue && year.Value > 0)
+            {
+                var startOfYear = new DateOnly(year.Value, 1, 1);
+                var endOfYear = new DateOnly(year.Value, 12, 31);
+                query = query.Where(x => x.HolidayDate >= startOfYear && x.HolidayDate <= endOfYear);
+            }
+
+            return await query
+                .OrderBy(x => x.HolidayDate)
                 .Select(x => new HolidayDto
                 {
                     Id = x.Id,
@@ -50,6 +67,39 @@ namespace HRMS.API.Repository.Holiday
                     IsActive = x.IsActive
                 })
                 .ToListAsync();
+        }
+
+
+        // =====================================================
+        // GET UPCOMING
+        // =====================================================
+
+        public async Task<HolidayDto?> GetUpcomingAsync(
+            long? companyId = null)
+        {
+            var today = DateOnly.FromDateTime(DateTime.Now);
+
+            var query = _context.Holidays
+                .AsNoTracking()
+                .Where(x => x.IsActive && x.HolidayDate >= today);
+
+            if (companyId.HasValue && companyId.Value > 0)
+            {
+                query = query.Where(x => x.CompanyId == companyId.Value);
+            }
+
+            return await query
+                .OrderBy(x => x.HolidayDate)
+                .Select(x => new HolidayDto
+                {
+                    Id = x.Id,
+                    CompanyId = x.CompanyId,
+                    HolidayDate = x.HolidayDate,
+                    HolidayName = x.HolidayName,
+                    Description = x.Description,
+                    IsActive = x.IsActive
+                })
+                .FirstOrDefaultAsync();
         }
 
 

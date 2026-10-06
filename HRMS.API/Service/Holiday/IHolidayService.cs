@@ -1,4 +1,4 @@
-﻿using HRMS.API.DTOs.Holiday;
+using HRMS.API.DTOs.Holiday;
 
 namespace HRMS.API.Service.Holiday
 {
@@ -7,7 +7,12 @@ namespace HRMS.API.Service.Holiday
         Task<HolidayDto> CreateAsync(
             CreateHolidayDto request);
 
-        Task<IEnumerable<HolidayDto>> GetAllAsync();
+        Task<IEnumerable<HolidayDto>> GetAllAsync(
+            long? companyId = null,
+            int? year = null);
+
+        Task<HolidayDto?> GetUpcomingAsync(
+            long? companyId = null);
 
         Task<HolidayDto?> GetByIdAsync(
             long id);

@@ -1,4 +1,4 @@
-﻿using HRMS.API.DTOs.Holiday;
+using HRMS.API.DTOs.Holiday;
 
 using HolidayEntity = HRMS.API.Entities.Holiday;
 
@@ -9,7 +9,12 @@ namespace HRMS.API.Repository.Holiday
         Task<HolidayEntity> CreateAsync(
             HolidayEntity holiday);
 
-        Task<IEnumerable<HolidayDto>> GetAllAsync();
+        Task<IEnumerable<HolidayDto>> GetAllAsync(
+            long? companyId = null,
+            int? year = null);
+
+        Task<HolidayDto?> GetUpcomingAsync(
+            long? companyId = null);
 
         Task<HolidayDto?> GetByIdAsync(
             long id);
