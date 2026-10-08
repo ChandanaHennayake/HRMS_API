@@ -1,4 +1,4 @@
-﻿using HRMS.API.DTOs.User;
+using HRMS.API.DTOs.User;
 
 namespace HRMS.API.Service.User
 {
@@ -9,6 +9,10 @@ namespace HRMS.API.Service.User
         Task<List<UserResponse>> GetAllAsync();
 
         Task<UserResponse?> GetByIdAsync(int id);
+
+        Task<UserProfileResponse?> GetProfileAsync(int userId);
+
+        Task ChangePasswordAsync(ChangePasswordRequest request);
 
         Task UpdateAsync(int id, UpdateUserRequest request);
 
