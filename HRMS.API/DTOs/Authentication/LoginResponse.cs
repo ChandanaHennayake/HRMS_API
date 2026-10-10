@@ -1,4 +1,4 @@
-﻿namespace HRMS.API.DTOs.Authentication
+namespace HRMS.API.DTOs.Authentication
 {
     public class LoginResponse
     {
@@ -20,6 +20,8 @@
         public int? BranchId { get; set; }
 
         public string Token { get; set; } = string.Empty;
+
+        public string? RefreshToken { get; set; }
 
         public DateTime Expiration { get; set; }
     }

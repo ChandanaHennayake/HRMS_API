@@ -1,4 +1,4 @@
-﻿using HRMS.API.DTOs.Branch;
+using HRMS.API.DTOs.Branch;
 using HRMS.API.Service.Branch;
 using Microsoft.AspNetCore.Mvc;
 
@@ -177,6 +177,100 @@ namespace HRMS.API.Controllers
                 {
                     success = false,
 
+                    message = ex.Message
+                });
+            }
+        }
+
+
+        // =====================================================
+        // MANAGER ASSIGNMENTS
+        // =====================================================
+
+        [HttpGet("managers/{branchId:int}")]
+        public async Task<IActionResult> GetManagers(int branchId)
+        {
+            try
+            {
+                var managers = await _branchService.GetManagersByBranchAsync(branchId);
+                return Ok(new
+                {
+                    success = true,
+                    data = managers
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("user-branches/{userId:int}")]
+        public async Task<IActionResult> GetUserBranches(int userId)
+        {
+            try
+            {
+                var branches = await _branchService.GetBranchesByManagerAsync(userId);
+                return Ok(new
+                {
+                    success = true,
+                    data = branches
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpPost("assign-manager")]
+        public async Task<IActionResult> AssignManager([FromBody] AssignManagerDto request)
+        {
+            try
+            {
+                var result = await _branchService.AssignManagerAsync(request);
+                return Ok(new
+                {
+                    success = true,
+                    message = "Manager assigned to branch successfully.",
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpDelete("remove-manager")]
+        public async Task<IActionResult> RemoveManager([FromQuery] int userId, [FromQuery] int branchId)
+        {
+            try
+            {
+                await _branchService.RemoveManagerAsync(userId, branchId);
+                return Ok(new
+                {
+                    success = true,
+                    message = "Manager assignment removed successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
                     message = ex.Message
                 });
             }
