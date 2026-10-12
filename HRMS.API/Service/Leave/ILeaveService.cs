@@ -1,4 +1,4 @@
-﻿using HRMS.API.DTOs.Leave;
+using HRMS.API.DTOs.Leave;
 
 namespace HRMS.API.Service.Leave
 {
@@ -12,7 +12,7 @@ namespace HRMS.API.Service.Leave
             GetEmployeeLeavesAsync(long employeeId);
 
         Task<IEnumerable<LeaveResponseDto>>
-            GetPendingLeavesAsync();
+            GetPendingLeavesAsync(int? branchId = null);
 
         Task<LeaveResponseDto> ApproveLeaveAsync(
             long leaveRequestId,
@@ -27,5 +27,9 @@ namespace HRMS.API.Service.Leave
         Task<LeaveResponseDto> CancelLeaveAsync(
             long leaveRequestId,
             long employeeId);
+
+        Task<IEnumerable<LeaveBalanceDto>> GetEmployeeLeaveBalancesAsync(
+            long employeeId,
+            int? year = null);
     }
 }

@@ -1,4 +1,4 @@
-﻿using HRMS.API.Data;
+using HRMS.API.Data;
 using HRMS.API.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -60,12 +60,20 @@ namespace HRMS.API.Repository.Leave
         // =====================================================
 
         public async Task<IEnumerable<LeaveRequest>>
-            GetPendingLeavesAsync()
+            GetPendingLeavesAsync(int? branchId = null)
         {
-            return await _context.LeaveRequests
+            var query = _context.LeaveRequests
                 .AsNoTracking()
+                .Include(x => x.Employee)
                 .Include(x => x.LeaveType)
-                .Where(x => x.Status == 0)
+                .Where(x => x.Status == 0);
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(x => x.Employee != null && x.Employee.BranchId == branchId.Value);
+            }
+
+            return await query
                 .OrderByDescending(x => x.AppliedAt)
                 .ToListAsync();
         }

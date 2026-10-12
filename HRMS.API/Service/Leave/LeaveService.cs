@@ -1,7 +1,10 @@
-﻿using HRMS.API.DTOs.Leave;
+using HRMS.API.DTOs.Leave;
 using HRMS.API.Enums;
 using HRMS.API.Interfaces.Repositories;
 using HRMS.API.Repository.Leave;
+using HRMS.API.Service.Audit;
+using HRMS.API.Service.Email;
+using HRMS.API.Service.Notification;
 using LeaveRequestEntity = HRMS.API.Entities.LeaveRequest;
 
 namespace HRMS.API.Service.Leave
@@ -10,13 +13,28 @@ namespace HRMS.API.Service.Leave
     {
         private readonly ILeaveRepository _leaveRepository;
         private readonly IEmployeeRepository _employeeRepository;
+        private readonly ILeaveBalanceRepository _leaveBalanceRepository;
+        private readonly ILeaveTypeRepository _leaveTypeRepository;
+        private readonly INotificationService _notificationService;
+        private readonly IAuditService _auditService;
+        private readonly IEmailService _emailService;
 
         public LeaveService(
             ILeaveRepository leaveRepository,
-            IEmployeeRepository employeeRepository)
+            IEmployeeRepository employeeRepository,
+            ILeaveBalanceRepository leaveBalanceRepository,
+            ILeaveTypeRepository leaveTypeRepository,
+            INotificationService notificationService,
+            IAuditService auditService,
+            IEmailService emailService)
         {
             _leaveRepository = leaveRepository;
             _employeeRepository = employeeRepository;
+            _leaveBalanceRepository = leaveBalanceRepository;
+            _leaveTypeRepository = leaveTypeRepository;
+            _notificationService = notificationService;
+            _auditService = auditService;
+            _emailService = emailService;
         }
 
         // =====================================================
@@ -114,6 +132,48 @@ namespace HRMS.API.Service.Leave
             }
 
             // -------------------------------------------------
+            // LEAVE BALANCE VALIDATION & PENDING ALLOCATION
+            // -------------------------------------------------
+
+            var leaveType = await _leaveTypeRepository
+                .GetByIdAsync(request.LeaveTypeId);
+
+            if (leaveType == null)
+            {
+                throw new Exception(
+                    "Leave type not found.");
+            }
+
+            if (leaveType.IsPaid)
+            {
+                int leaveYear = request.FromDate.Year;
+
+                await _leaveBalanceRepository
+                    .EnsureBalancesAsync(employeeId, leaveYear, employee.CompanyId);
+
+                var balance = await _leaveBalanceRepository
+                    .GetBalanceAsync(employeeId, request.LeaveTypeId, leaveYear);
+
+                if (balance == null)
+                {
+                    throw new Exception(
+                        $"No leave balance found for {leaveType.Name} in {leaveYear}.");
+                }
+
+                decimal available = balance.AllocatedDays - (balance.UsedDays + balance.PendingDays);
+
+                if (available < totalDays)
+                {
+                    throw new Exception(
+                        $"Insufficient leave balance for {leaveType.Name}. " +
+                        $"Available: {Math.Max(0, available)} days, Requested: {totalDays} days.");
+                }
+
+                balance.PendingDays += totalDays;
+                await _leaveBalanceRepository.UpdateAsync(balance);
+            }
+
+            // -------------------------------------------------
             // CREATE LEAVE REQUEST
             // -------------------------------------------------
 
@@ -197,10 +257,10 @@ namespace HRMS.API.Service.Leave
         // =====================================================
 
         public async Task<IEnumerable<LeaveResponseDto>>
-            GetPendingLeavesAsync()
+            GetPendingLeavesAsync(int? branchId = null)
         {
             var leaves = await _leaveRepository
-                .GetPendingLeavesAsync();
+                .GetPendingLeavesAsync(branchId);
 
             return leaves.Select(MapToDto);
         }
@@ -232,6 +292,26 @@ namespace HRMS.API.Service.Leave
                     "Only pending leave requests can be approved.");
             }
 
+            // Update leave balance: pending -> used
+            var leaveType = await _leaveTypeRepository
+                .GetByIdAsync(leaveRequest.LeaveTypeId);
+
+            if (leaveType?.IsPaid == true)
+            {
+                var balance = await _leaveBalanceRepository
+                    .GetBalanceAsync(
+                        leaveRequest.EmployeeId,
+                        leaveRequest.LeaveTypeId,
+                        leaveRequest.FromDate.Year);
+
+                if (balance != null)
+                {
+                    balance.PendingDays = Math.Max(0, balance.PendingDays - leaveRequest.TotalDays);
+                    balance.UsedDays += leaveRequest.TotalDays;
+                    await _leaveBalanceRepository.UpdateAsync(balance);
+                }
+            }
+
             leaveRequest.Status =
                 (short)LeaveRequestStatus.Approved;
 
@@ -259,6 +339,35 @@ namespace HRMS.API.Service.Leave
                 throw new Exception(
                     "Unable to load updated leave request.");
             }
+
+            await _notificationService.NotifyLeaveDecisionAsync(
+                updatedLeave.EmployeeId,
+                updatedLeave.LeaveType?.Name ?? "Leave",
+                true,
+                request.Comment);
+
+            var empForEmail = await _employeeRepository.GetEntityByIdAsync(updatedLeave.EmployeeId);
+            if (empForEmail != null && !string.IsNullOrWhiteSpace(empForEmail.Email))
+            {
+                await _emailService.SendLeaveDecisionEmailAsync(
+                    empForEmail.Email,
+                    $"{empForEmail.FirstName} {empForEmail.LastName}".Trim(),
+                    updatedLeave.LeaveType?.Name ?? "Leave",
+                    updatedLeave.FromDate,
+                    updatedLeave.ToDate,
+                    updatedLeave.TotalDays,
+                    true,
+                    request.Comment);
+            }
+
+            await _auditService.LogEntityActionAsync(
+                approvedBy != 0 ? (int)approvedBy : null,
+                null,
+                "Approve",
+                "LeaveRequest",
+                updatedLeave.Id.ToString(),
+                $"Approved leave request #{updatedLeave.Id} ({updatedLeave.LeaveType?.Name}) for Employee #{updatedLeave.EmployeeId}. Comment: {request.Comment}",
+                severity: "Info");
 
             return MapToDto(updatedLeave);
         }
@@ -297,6 +406,25 @@ namespace HRMS.API.Service.Leave
                     "Comment is required when rejecting leave.");
             }
 
+            // Revert pending days in leave balance
+            var leaveType = await _leaveTypeRepository
+                .GetByIdAsync(leaveRequest.LeaveTypeId);
+
+            if (leaveType?.IsPaid == true)
+            {
+                var balance = await _leaveBalanceRepository
+                    .GetBalanceAsync(
+                        leaveRequest.EmployeeId,
+                        leaveRequest.LeaveTypeId,
+                        leaveRequest.FromDate.Year);
+
+                if (balance != null)
+                {
+                    balance.PendingDays = Math.Max(0, balance.PendingDays - leaveRequest.TotalDays);
+                    await _leaveBalanceRepository.UpdateAsync(balance);
+                }
+            }
+
             leaveRequest.Status =
                 (short)LeaveRequestStatus.Rejected;
 
@@ -324,6 +452,35 @@ namespace HRMS.API.Service.Leave
                 throw new Exception(
                     "Unable to load updated leave request.");
             }
+
+            await _notificationService.NotifyLeaveDecisionAsync(
+                updatedLeave.EmployeeId,
+                updatedLeave.LeaveType?.Name ?? "Leave",
+                false,
+                request.Comment);
+
+            var empForRejectEmail = await _employeeRepository.GetEntityByIdAsync(updatedLeave.EmployeeId);
+            if (empForRejectEmail != null && !string.IsNullOrWhiteSpace(empForRejectEmail.Email))
+            {
+                await _emailService.SendLeaveDecisionEmailAsync(
+                    empForRejectEmail.Email,
+                    $"{empForRejectEmail.FirstName} {empForRejectEmail.LastName}".Trim(),
+                    updatedLeave.LeaveType?.Name ?? "Leave",
+                    updatedLeave.FromDate,
+                    updatedLeave.ToDate,
+                    updatedLeave.TotalDays,
+                    false,
+                    request.Comment);
+            }
+
+            await _auditService.LogEntityActionAsync(
+                rejectedBy != 0 ? (int)rejectedBy : null,
+                null,
+                "Reject",
+                "LeaveRequest",
+                updatedLeave.Id.ToString(),
+                $"Rejected leave request #{updatedLeave.Id} ({updatedLeave.LeaveType?.Name}) for Employee #{updatedLeave.EmployeeId}. Reason: {request.Comment}",
+                severity: "Warning");
 
             return MapToDto(updatedLeave);
         }
@@ -366,6 +523,25 @@ namespace HRMS.API.Service.Leave
             {
                 throw new Exception(
                     "Only pending leave requests can be cancelled.");
+            }
+
+            // Revert pending days in leave balance
+            var leaveType = await _leaveTypeRepository
+                .GetByIdAsync(leaveRequest.LeaveTypeId);
+
+            if (leaveType?.IsPaid == true)
+            {
+                var balance = await _leaveBalanceRepository
+                    .GetBalanceAsync(
+                        leaveRequest.EmployeeId,
+                        leaveRequest.LeaveTypeId,
+                        leaveRequest.FromDate.Year);
+
+                if (balance != null)
+                {
+                    balance.PendingDays = Math.Max(0, balance.PendingDays - leaveRequest.TotalDays);
+                    await _leaveBalanceRepository.UpdateAsync(balance);
+                }
             }
 
             leaveRequest.Status =
@@ -455,6 +631,42 @@ namespace HRMS.API.Service.Leave
                 CancelledAt =
                     leave.CancelledAt
             };
+        }
+
+        // =====================================================
+        // GET EMPLOYEE LEAVE BALANCES
+        // =====================================================
+
+        public async Task<IEnumerable<LeaveBalanceDto>>
+            GetEmployeeLeaveBalancesAsync(long employeeId, int? year = null)
+        {
+            var employee = await _employeeRepository
+                .GetEntityByIdAsync(employeeId);
+
+            if (employee == null)
+            {
+                throw new Exception("Employee not found.");
+            }
+
+            int queryYear = year ?? DateTime.Now.Year;
+
+            await _leaveBalanceRepository
+                .EnsureBalancesAsync(employeeId, queryYear, employee.CompanyId);
+
+            var balances = await _leaveBalanceRepository
+                .GetBalancesAsync(employeeId, queryYear);
+
+            return balances.Select(b => new LeaveBalanceDto
+            {
+                LeaveTypeId = b.LeaveTypeId,
+                LeaveTypeName = b.LeaveType?.Name ?? "",
+                LeaveTypeCode = b.LeaveType?.Code ?? "",
+                IsPaid = b.LeaveType?.IsPaid ?? true,
+                Year = b.Year,
+                AllocatedDays = b.AllocatedDays,
+                UsedDays = b.UsedDays,
+                PendingDays = b.PendingDays
+            });
         }
 
         // =====================================================
