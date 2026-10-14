@@ -22,15 +22,26 @@ namespace HRMS.API.Controllers
         public async Task<IActionResult> Login(
             [FromBody] LoginRequest request)
         {
-            var result =
-                await _authenticationService.LoginAsync(request);
-
-            return Ok(new
+            try
             {
-                Success = true,
-                Message = "Login successful.",
-                Data = result
-            });
+                var result =
+                    await _authenticationService.LoginAsync(request);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Login successful.",
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpPost("refresh-token")]

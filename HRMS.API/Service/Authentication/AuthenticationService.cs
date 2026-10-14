@@ -113,9 +113,9 @@ namespace HRMS.API.Service.Authentication
             {
                 userid = user.UserId,
                 token = refreshTokenString,
-                expirydate = DateTime.UtcNow.AddDays(7),
+                expirydate = DateTime.Now.AddDays(7),
                 isrevoked = false,
-                createddate = DateTime.UtcNow
+                createddate = DateTime.Now
             };
 
             await _context.RefreshTokens.AddAsync(refreshTokenEntity);
@@ -137,7 +137,7 @@ namespace HRMS.API.Service.Authentication
                 BranchId = user.BranchId,
                 Token = token,
                 RefreshToken = refreshTokenString,
-                Expiration = DateTime.UtcNow.AddMinutes(durationInMinutes)
+                Expiration = DateTime.Now.AddMinutes(durationInMinutes)
             };
         }
 
@@ -157,7 +157,7 @@ namespace HRMS.API.Service.Authentication
             if (existingToken.isrevoked == true)
                 throw new Exception("Refresh token has been revoked.");
 
-            if (existingToken.expirydate <= DateTime.UtcNow)
+            if (existingToken.expirydate <= DateTime.Now)
                 throw new Exception("Refresh token has expired.");
 
             var user = existingToken.user;
@@ -175,9 +175,9 @@ namespace HRMS.API.Service.Authentication
             {
                 userid = user.UserId,
                 token = newRefreshTokenString,
-                expirydate = DateTime.UtcNow.AddDays(7),
+                expirydate = DateTime.Now.AddDays(7),
                 isrevoked = false,
-                createddate = DateTime.UtcNow
+                createddate = DateTime.Now
             };
 
             await _context.RefreshTokens.AddAsync(newRefreshTokenEntity);
