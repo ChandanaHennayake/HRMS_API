@@ -1,11 +1,13 @@
-﻿using HRMS.API.DTOs.Authentication;
+using HRMS.API.DTOs.Authentication;
 using HRMS.API.Service.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HRMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [EnableRateLimiting("AuthLimiter")]
     public class AuthenticationController : ControllerBase
     {
         private readonly IAuthenticationService _authenticationService;
@@ -29,6 +31,31 @@ namespace HRMS.API.Controllers
                 Message = "Login successful.",
                 Data = result
             });
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken(
+            [FromBody] RefreshTokenRequest request)
+        {
+            try
+            {
+                var result = await _authenticationService.RefreshTokenAsync(request.RefreshToken);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Token refreshed successfully.",
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
     }
 }

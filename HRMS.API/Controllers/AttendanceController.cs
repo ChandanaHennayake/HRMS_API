@@ -1,4 +1,4 @@
-﻿using ABANS_BAN.DTOs.Attendance;
+using ABANS_BAN.DTOs.Attendance;
 using HRMS.API.Service.Attendance;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -192,5 +192,35 @@ namespace HRMS.API.Controllers
             }
         }
 
+        // =====================================================
+        // GET BRANCH / COMPANY DAILY ATTENDANCE ROSTER
+        // GET: api/Attendance/branch-daily?branchId=1&date=2026-10-13
+        // GET: api/Attendance/company-today?branchId=1&date=2026-10-13
+        // =====================================================
+
+        [HttpGet("branch-daily")]
+        [HttpGet("company-today")]
+        public async Task<IActionResult> GetBranchDailyAttendance(
+            [FromQuery] int? branchId,
+            [FromQuery] DateOnly? date)
+        {
+            try
+            {
+                var roster = await _attendanceService.GetBranchDailyAttendanceAsync(branchId, date);
+                return Ok(new
+                {
+                    success = true,
+                    data = roster
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
     }
 }

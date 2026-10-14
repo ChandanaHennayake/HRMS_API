@@ -1,4 +1,4 @@
-﻿using ABANS_BAN.DTOs.Attendance;
+using ABANS_BAN.DTOs.Attendance;
 
 namespace HRMS.API.Service.Attendance
 {
@@ -24,5 +24,10 @@ namespace HRMS.API.Service.Attendance
             long? employeeId,
             DateOnly? fromDate,
             DateOnly? toDate);
+
+        Task<List<HRMS.API.DTOs.Attendance.BranchDailyAttendanceDto>>
+        GetBranchDailyAttendanceAsync(
+            int? branchId,
+            DateOnly? date);
     }
 }

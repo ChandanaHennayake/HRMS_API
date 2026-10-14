@@ -1,9 +1,10 @@
-﻿using ABANS_BAN.DTOs.Attendance;
+using ABANS_BAN.DTOs.Attendance;
 using HRMS.API.Enums;
 using HRMS.API.Helpers;
 using HRMS.API.Interfaces.Repositories;
 using HRMS.API.Repository.Attendance;
 using HRMS.API.Repository.Leave;
+using HRMS.API.Service.Notification;
 using AttendanceEntity = HRMS.API.Entities.Attendance;
 
 namespace HRMS.API.Service.Attendance
@@ -14,19 +15,23 @@ namespace HRMS.API.Service.Attendance
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IBranchRepository _branchRepository;
         private readonly ILeaveRepository _leaveRepository;
-
-
+        private readonly HRMS.API.Repository.Holiday.IHolidayRepository _holidayRepository;
+        private readonly INotificationService _notificationService;
 
         public AttendanceService(
             IAttendanceRepository attendanceRepository,
             IEmployeeRepository employeeRepository,
             IBranchRepository branchRepository,
-               ILeaveRepository leaveRepository)
+            ILeaveRepository leaveRepository,
+            HRMS.API.Repository.Holiday.IHolidayRepository holidayRepository,
+            INotificationService notificationService)
         {
             _attendanceRepository = attendanceRepository;
             _employeeRepository = employeeRepository;
             _branchRepository = branchRepository;
             _leaveRepository = leaveRepository;
+            _holidayRepository = holidayRepository;
+            _notificationService = notificationService;
         }
 
 
@@ -485,14 +490,46 @@ namespace HRMS.API.Service.Attendance
                 // Already checked in / attendance exists
                 if (attendance != null)
                 {
+                    if (attendance.CheckOutTime == null && attendance.CheckInTime != null)
+                    {
+                        await _notificationService.SendNotificationAsync(new HRMS.API.DTOs.Notification.CreateNotificationDto
+                        {
+                            EmployeeId = employee.Id,
+                            Title = "Missing Check-Out Alert",
+                            Message = $"You checked in on {date:yyyy-MM-dd} at {attendance.CheckInTime:HH:mm} without checking out. Please submit an attendance correction request.",
+                            Type = "Warning",
+                            ReferenceType = "Attendance",
+                            ReferenceId = attendance.Id
+                        });
+                    }
                     continue;
                 }
+
+                var isHoliday =
+                    await _holidayRepository
+                        .IsHolidayAsync(
+                            employee.CompanyId,
+                            date);
 
                 var hasApprovedLeave =
                     await _leaveRepository
                         .HasApprovedLeaveAsync(
                             employee.Id,
                             date);
+
+                short status;
+                if (isHoliday)
+                {
+                    status = (short)AttendanceStatus.Holiday;
+                }
+                else if (hasApprovedLeave)
+                {
+                    status = (short)AttendanceStatus.OnLeave;
+                }
+                else
+                {
+                    status = (short)AttendanceStatus.Absent;
+                }
 
                 var newAttendance = new AttendanceEntity
                 {
@@ -516,9 +553,7 @@ namespace HRMS.API.Service.Attendance
 
                     IsEarlyDeparture = false,
 
-                    Status = hasApprovedLeave
-                        ? (short)AttendanceStatus.OnLeave
-                        : (short)AttendanceStatus.Absent,
+                    Status = status,
 
                     CreatedAt = DateTime.Now
                 };
@@ -587,6 +622,123 @@ namespace HRMS.API.Service.Attendance
             return history;
         }
 
+        // =========================================================
+        // GET BRANCH / COMPANY DAILY ATTENDANCE ROSTER
+        // =========================================================
 
+        public async Task<List<HRMS.API.DTOs.Attendance.BranchDailyAttendanceDto>>
+            GetBranchDailyAttendanceAsync(
+                int? branchId,
+                DateOnly? date)
+        {
+            var targetDate = date ?? DateOnly.FromDateTime(DateTime.Today);
+
+            // Fetch active employees
+            var allEmployees = await _employeeRepository.GetAllAsync();
+            var filteredEmployees = allEmployees
+                .Where(e => e.IsActive && (!branchId.HasValue || branchId.Value <= 0 || e.BranchId == branchId.Value))
+                .ToList();
+
+            var branches = (await _branchRepository.GetAllAsync())
+                .ToDictionary(b => b.branchid, b => b.branchname);
+
+            var result = new List<HRMS.API.DTOs.Attendance.BranchDailyAttendanceDto>();
+
+            foreach (var emp in filteredEmployees)
+            {
+                var att = await _attendanceRepository.GetTodayAttendanceAsync(emp.Id, targetDate);
+
+                int status;
+                string statusName;
+
+                if (att != null)
+                {
+                    status = att.Status;
+                    statusName = status switch
+                    {
+                        1 => "Present",
+                        2 => "On Leave",
+                        3 => "Weekly Off",
+                        4 => "Holiday",
+                        _ => "Absent"
+                    };
+
+                    result.Add(new HRMS.API.DTOs.Attendance.BranchDailyAttendanceDto
+                    {
+                        EmployeeId = emp.Id,
+                        EmployeeCode = emp.EmployeeCode,
+                        FullName = emp.FullName,
+                        DepartmentName = emp.DepartmentName,
+                        DesignationName = emp.DesignationName,
+                        BranchId = emp.BranchId,
+                        BranchName = branches.TryGetValue((int)emp.BranchId, out var bName) ? bName : "N/A",
+                        AttendanceDate = targetDate,
+                        CheckInTime = att.CheckInTime,
+                        CheckOutTime = att.CheckOutTime,
+                        WorkedMinutes = att.WorkedMinutes,
+                        Status = status,
+                        StatusName = statusName,
+                        IsLate = att.IsLate,
+                        LateMinutes = att.LateMinutes,
+                        IsEarlyDeparture = att.IsEarlyDeparture,
+                        EarlyDepartureMinutes = att.EarlyDepartureMinutes
+                    });
+                }
+                else
+                {
+                    var isHoliday = await _holidayRepository.IsHolidayAsync(emp.CompanyId, targetDate);
+                    var hasApprovedLeave = await _leaveRepository.HasApprovedLeaveAsync(emp.Id, targetDate);
+
+                    if (isHoliday)
+                    {
+                        status = 4;
+                        statusName = "Holiday";
+                    }
+                    else if (hasApprovedLeave)
+                    {
+                        status = 2;
+                        statusName = "On Leave";
+                    }
+                    else if (targetDate.DayOfWeek == DayOfWeek.Sunday)
+                    {
+                        status = 3;
+                        statusName = "Weekly Off";
+                    }
+                    else if (targetDate < DateOnly.FromDateTime(DateTime.Today))
+                    {
+                        status = 0;
+                        statusName = "Absent";
+                    }
+                    else
+                    {
+                        status = 0;
+                        statusName = "Not Reported";
+                    }
+
+                    result.Add(new HRMS.API.DTOs.Attendance.BranchDailyAttendanceDto
+                    {
+                        EmployeeId = emp.Id,
+                        EmployeeCode = emp.EmployeeCode,
+                        FullName = emp.FullName,
+                        DepartmentName = emp.DepartmentName,
+                        DesignationName = emp.DesignationName,
+                        BranchId = emp.BranchId,
+                        BranchName = branches.TryGetValue((int)emp.BranchId, out var bName) ? bName : "N/A",
+                        AttendanceDate = targetDate,
+                        CheckInTime = null,
+                        CheckOutTime = null,
+                        WorkedMinutes = 0,
+                        Status = status,
+                        StatusName = statusName,
+                        IsLate = false,
+                        LateMinutes = 0,
+                        IsEarlyDeparture = false,
+                        EarlyDepartureMinutes = 0
+                    });
+                }
+            }
+
+            return result.OrderBy(r => r.FullName).ToList();
+        }
     }
 }

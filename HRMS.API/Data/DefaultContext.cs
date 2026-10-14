@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using HRMS.API.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +20,8 @@ public partial class DefaultContext : DbContext
 
     public virtual DbSet<Attendance> Attendances { get; set; }
 
+    public virtual DbSet<AttendanceCorrection> AttendanceCorrections { get; set; }
+
     public virtual DbSet<Branch> Branches { get; set; }
 
     public virtual DbSet<Company> Companies { get; set; }
@@ -35,6 +37,30 @@ public partial class DefaultContext : DbContext
     public virtual DbSet<Holiday> Holidays { get; set; }
 
     public virtual DbSet<LeaveRequest> LeaveRequests { get; set; }
+
+    public virtual DbSet<EmployeeLeaveBalance> EmployeeLeaveBalances { get; set; }
+
+    public virtual DbSet<SalaryComponent> SalaryComponents { get; set; }
+
+    public virtual DbSet<SalaryStructure> SalaryStructures { get; set; }
+
+    public virtual DbSet<SalaryStructureComponent> SalaryStructureComponents { get; set; }
+
+    public virtual DbSet<EmployeeSalary> EmployeeSalaries { get; set; }
+
+    public virtual DbSet<EmployeeSalaryComponent> EmployeeSalaryComponents { get; set; }
+
+    public virtual DbSet<PayrollPeriod> PayrollPeriods { get; set; }
+
+    public virtual DbSet<PayrollRun> PayrollRuns { get; set; }
+
+    public virtual DbSet<Payslip> Payslips { get; set; }
+
+    public virtual DbSet<PayslipItem> PayslipItems { get; set; }
+
+    public virtual DbSet<Notification> Notifications { get; set; }
+
+    public virtual DbSet<AuditLog> AuditLogs { get; set; }
 
     public virtual DbSet<LeaveType> LeaveTypes { get; set; }
 
@@ -53,7 +79,6 @@ public partial class DefaultContext : DbContext
     public virtual DbSet<UserBranch> UserBranches { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=ABANS_BAN;Username=postgres;Password=Nishantha@123");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -95,6 +120,22 @@ public partial class DefaultContext : DbContext
             entity.HasOne(d => d.Employee).WithMany(p => p.Attendances)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Attendance_Employee");
+        });
+
+        modelBuilder.Entity<AttendanceCorrection>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("AttendanceCorrection_pkey");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.Status).HasDefaultValue((short)0);
+
+            entity.HasOne(d => d.Attendance).WithMany()
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_AttendanceCorrection_Attendance");
+
+            entity.HasOne(d => d.Employee).WithMany()
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_AttendanceCorrection_Employee");
         });
 
         modelBuilder.Entity<Branch>(entity =>
@@ -194,6 +235,24 @@ public partial class DefaultContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.IsPaid).HasDefaultValue(true);
+        });
+
+        modelBuilder.Entity<EmployeeLeaveBalance>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("EmployeeLeaveBalance_pkey");
+
+            entity.Property(e => e.AllocatedDays).HasDefaultValue(0m);
+            entity.Property(e => e.UsedDays).HasDefaultValue(0m);
+            entity.Property(e => e.PendingDays).HasDefaultValue(0m);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(d => d.Employee).WithMany()
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_EmployeeLeaveBalance_Employee");
+
+            entity.HasOne(d => d.LeaveType).WithMany()
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_EmployeeLeaveBalance_LeaveType");
         });
 
         modelBuilder.Entity<LoginHistory>(entity =>
