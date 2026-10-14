@@ -1,4 +1,4 @@
-﻿using HRMS.API.Entities;
+using HRMS.API.Entities;
 
 namespace HRMS.API.Interfaces.Repositories
 {
@@ -20,5 +20,15 @@ namespace HRMS.API.Interfaces.Repositories
         Task UpdateAsync(Branch branch);
 
         Task DeleteAsync(Branch branch);
+
+        Task<IEnumerable<UserBranch>> GetManagersByBranchAsync(int branchId);
+
+        Task<IEnumerable<UserBranch>> GetBranchesByManagerAsync(int userId);
+
+        Task<UserBranch?> GetUserBranchAsync(int userId, int branchId);
+
+        Task<UserBranch> AssignManagerAsync(UserBranch userBranch);
+
+        Task RemoveManagerAsync(UserBranch userBranch);
     }
 }

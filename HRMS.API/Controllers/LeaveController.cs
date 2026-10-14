@@ -1,4 +1,4 @@
-﻿using HRMS.API.DTOs.Leave;
+using HRMS.API.DTOs.Leave;
 using HRMS.API.Service.Leave;
 using Microsoft.AspNetCore.Mvc;
 
@@ -90,6 +90,69 @@ namespace HRMS.API.Controllers
 
 
         // =====================================================
+        // GET EMPLOYEE LEAVE BALANCES
+        //
+        // GET:
+        // api/Leave/employee/5/balance?year=2026
+        // =====================================================
+
+        [HttpGet("employee/{employeeId:long}/balance")]
+        public async Task<IActionResult> GetEmployeeLeaveBalances(
+            long employeeId,
+            [FromQuery] int? year)
+        {
+            try
+            {
+                var result = await _leaveService
+                    .GetEmployeeLeaveBalancesAsync(employeeId, year);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+
+        // GET:
+        // api/Leave/balance?employeeId=5&year=2026
+        [HttpGet("balance")]
+        public async Task<IActionResult> GetLeaveBalancesByQuery(
+            [FromQuery] long employeeId,
+            [FromQuery] int? year)
+        {
+            try
+            {
+                var result = await _leaveService
+                    .GetEmployeeLeaveBalancesAsync(employeeId, year);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+
+        // =====================================================
         // GET ALL PENDING LEAVE REQUESTS
         //
         // GET:
@@ -97,12 +160,12 @@ namespace HRMS.API.Controllers
         // =====================================================
 
         [HttpGet("pending")]
-        public async Task<IActionResult> GetPendingLeaves()
+        public async Task<IActionResult> GetPendingLeaves([FromQuery] int? branchId = null)
         {
             try
             {
                 var result = await _leaveService
-                    .GetPendingLeavesAsync();
+                    .GetPendingLeavesAsync(branchId);
 
                 return Ok(new
                 {

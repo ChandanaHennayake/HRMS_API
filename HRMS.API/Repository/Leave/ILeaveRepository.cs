@@ -1,4 +1,4 @@
-﻿using HRMS.API.Entities;
+using HRMS.API.Entities;
 
 namespace HRMS.API.Repository.Leave
 {
@@ -17,9 +17,10 @@ namespace HRMS.API.Repository.Leave
             GetEmployeeLeavesAsync(
                 long employeeId);
 
-        // Get all pending leave requests
+        // Get all pending leave requests (optionally filtered by branch)
         Task<IEnumerable<LeaveRequest>>
-            GetPendingLeavesAsync();
+            GetPendingLeavesAsync(
+                int? branchId = null);
 
         // Check whether employee already has
         // pending/approved leave in this period

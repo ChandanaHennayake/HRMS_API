@@ -1,6 +1,7 @@
-﻿using ABANS_BAN.DTOs.Attendance;
+using ABANS_BAN.DTOs.Attendance;
 using HRMS.API.Service.Attendance;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace HRMS.API.Controllers
 {
@@ -112,6 +113,104 @@ namespace HRMS.API.Controllers
                     message =
                         "Attendance retrieved successfully.",
                     data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+
+        [HttpGet("history")]
+        public async Task<IActionResult> GetAttendanceHistory(
+           [FromQuery] long? employeeId,
+           [FromQuery] DateOnly? fromDate,
+           [FromQuery] DateOnly? toDate)
+        {
+            try
+            {
+                // ---------------------------------------------
+                // GET LOGGED-IN EMPLOYEE ID
+                // ---------------------------------------------
+
+                var employeeIdClaim =
+                    User.FindFirst("EmployeeId")?.Value
+                    ??
+                    User.FindFirst(
+                        ClaimTypes.NameIdentifier)?.Value;
+
+                if (!long.TryParse(
+                        employeeIdClaim,
+                        out var loggedInEmployeeId))
+                {
+                    return Unauthorized(
+                        new
+                        {
+                            message =
+                                "Employee ID not found in token."
+                        });
+                }
+
+
+                // ---------------------------------------------
+                // CHECK ADMIN
+                // ---------------------------------------------
+
+                var isAdmin =
+                    User.IsInRole("Admin") ||
+                    User.IsInRole("SuperAdmin");
+
+
+                // ---------------------------------------------
+                // GET HISTORY
+                // ---------------------------------------------
+
+                var result =
+                    await _attendanceService
+                        .GetAttendanceHistoryAsync(
+                            loggedInEmployeeId,
+                            isAdmin,
+                            employeeId,
+                            fromDate,
+                            toDate);
+
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(
+                    new
+                    {
+                        message = ex.Message
+                    });
+            }
+        }
+
+        // =====================================================
+        // GET BRANCH / COMPANY DAILY ATTENDANCE ROSTER
+        // GET: api/Attendance/branch-daily?branchId=1&date=2026-10-13
+        // GET: api/Attendance/company-today?branchId=1&date=2026-10-13
+        // =====================================================
+
+        [HttpGet("branch-daily")]
+        [HttpGet("company-today")]
+        public async Task<IActionResult> GetBranchDailyAttendance(
+            [FromQuery] int? branchId,
+            [FromQuery] DateOnly? date)
+        {
+            try
+            {
+                var roster = await _attendanceService.GetBranchDailyAttendanceAsync(branchId, date);
+                return Ok(new
+                {
+                    success = true,
+                    data = roster
                 });
             }
             catch (Exception ex)

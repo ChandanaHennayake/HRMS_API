@@ -1,0 +1,35 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
+
+namespace HRMS.API.Entities;
+
+[Table("PayrollPeriod")]
+[Index("CompanyId", "Year", "Month", Name = "UQ_PayrollPeriod_Company_Year_Month", IsUnique = true)]
+public partial class PayrollPeriod
+{
+    [Key]
+    public long Id { get; set; }
+
+    public long CompanyId { get; set; }
+
+    public int Year { get; set; }
+
+    public int Month { get; set; }
+
+    [StringLength(50)]
+    public string Name { get; set; } = null!;
+
+    public DateOnly StartDate { get; set; }
+
+    public DateOnly EndDate { get; set; }
+
+    public bool IsClosed { get; set; } = false;
+
+    [Column(TypeName = "timestamp without time zone")]
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+    public virtual ICollection<PayrollRun> PayrollRuns { get; set; } = new List<PayrollRun>();
+}

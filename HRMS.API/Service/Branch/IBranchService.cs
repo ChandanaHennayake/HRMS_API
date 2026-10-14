@@ -1,4 +1,4 @@
-﻿using HRMS.API.DTOs.Branch;
+using HRMS.API.DTOs.Branch;
 
 namespace HRMS.API.Service.Branch
 {
@@ -16,5 +16,13 @@ namespace HRMS.API.Service.Branch
             UpdateBranchDto request);
 
         Task DeleteAsync(int id);
+
+        Task<IEnumerable<BranchManagerDto>> GetManagersByBranchAsync(int branchId);
+
+        Task<IEnumerable<BranchDto>> GetBranchesByManagerAsync(int userId);
+
+        Task<BranchManagerDto> AssignManagerAsync(AssignManagerDto request);
+
+        Task RemoveManagerAsync(int userId, int branchId);
     }
 }

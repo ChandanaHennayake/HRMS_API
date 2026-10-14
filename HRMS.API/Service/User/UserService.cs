@@ -1,4 +1,4 @@
-﻿using HRMS.API.DTOs.User;
+using HRMS.API.DTOs.User;
 using HRMS.API.Entities;
 using HRMS.API.Repository.UserDetails;
 
@@ -98,6 +98,41 @@ namespace HRMS.API.Service.User
                 Role = user.Role?.rolename ?? string.Empty,
                 IsActive = user.IsActive ?? false
             };
+        }
+
+        public async Task<UserProfileResponse?> GetProfileAsync(int userId)
+        {
+            return await _userRepository.GetProfileAsync(userId);
+        }
+
+        public async Task ChangePasswordAsync(ChangePasswordRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+                throw new Exception("Current password is required.");
+
+            if (string.IsNullOrWhiteSpace(request.NewPassword))
+                throw new Exception("New password is required.");
+
+            if (request.NewPassword.Length < 6)
+                throw new Exception("New password must be at least 6 characters long.");
+
+            var user = await _userRepository.GetByIdAsync(request.UserId);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            // Validate current password against stored BCrypt hash
+            bool isValid = BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash);
+            if (!isValid)
+                throw new Exception("Current password is incorrect.");
+
+            // Update to new password hash
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.PasswordSalt = null;
+            user.PasswordChangedDate = DateTime.Now;
+            user.ModifiedDate = DateTime.Now;
+            user.ModifiedBy = user.UserId;
+
+            await _userRepository.UpdateAsync(user);
         }
 
         public async Task UpdateAsync(int id, UpdateUserRequest request)

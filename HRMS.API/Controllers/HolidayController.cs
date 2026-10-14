@@ -1,4 +1,4 @@
-﻿using HRMS.API.DTOs.Holiday;
+using HRMS.API.DTOs.Holiday;
 using HRMS.API.Service.Holiday;
 using Microsoft.AspNetCore.Mvc;
 
@@ -51,16 +51,49 @@ namespace HRMS.API.Controllers
 
         // =====================================================
         // GET ALL HOLIDAYS
-        // GET: api/Holiday
+        // GET: api/Holiday?companyId=1&year=2026
         // =====================================================
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(
+            [FromQuery] long? companyId,
+            [FromQuery] int? year)
         {
             try
             {
                 var result =
-                    await _holidayService.GetAllAsync();
+                    await _holidayService.GetAllAsync(companyId, year);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+
+        // =====================================================
+        // GET UPCOMING HOLIDAY
+        // GET: api/Holiday/upcoming?companyId=1
+        // =====================================================
+
+        [HttpGet("upcoming")]
+        public async Task<IActionResult> GetUpcoming(
+            [FromQuery] long? companyId)
+        {
+            try
+            {
+                var result =
+                    await _holidayService.GetUpcomingAsync(companyId);
 
                 return Ok(new
                 {

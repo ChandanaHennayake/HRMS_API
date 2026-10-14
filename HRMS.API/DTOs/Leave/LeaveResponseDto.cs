@@ -8,6 +8,8 @@
 
         public long LeaveTypeId { get; set; }
 
+        public string LeaveType { get; set; } = string.Empty;
+
         public DateOnly FromDate { get; set; }
 
         public DateOnly ToDate { get; set; }
@@ -18,7 +20,7 @@
 
         public short Status { get; set; }
 
-        public string StatusName { get; set; } = null!;
+        public string StatusName { get; set; } = string.Empty;
 
         public DateTime AppliedAt { get; set; }
 

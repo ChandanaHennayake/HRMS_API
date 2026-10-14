@@ -1,4 +1,4 @@
-﻿using HRMS.API.Data;
+using HRMS.API.Data;
 using HRMS.API.Entities;
 using HRMS.API.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -109,6 +109,50 @@ namespace HRMS.API.Repositories
 
             _context.Branches.Update(branch);
 
+            await _context.SaveChangesAsync();
+        }
+
+
+        // =====================================================
+        // MANAGER ASSIGNMENTS
+        // =====================================================
+
+        public async Task<IEnumerable<UserBranch>> GetManagersByBranchAsync(int branchId)
+        {
+            return await _context.UserBranches
+                .AsNoTracking()
+                .Include(ub => ub.user)
+                .Include(ub => ub.branch)
+                .Where(ub => ub.branchid == branchId)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<UserBranch>> GetBranchesByManagerAsync(int userId)
+        {
+            return await _context.UserBranches
+                .AsNoTracking()
+                .Include(ub => ub.user)
+                .Include(ub => ub.branch)
+                .Where(ub => ub.userid == userId)
+                .ToListAsync();
+        }
+
+        public async Task<UserBranch?> GetUserBranchAsync(int userId, int branchId)
+        {
+            return await _context.UserBranches
+                .FirstOrDefaultAsync(ub => ub.userid == userId && ub.branchid == branchId);
+        }
+
+        public async Task<UserBranch> AssignManagerAsync(UserBranch userBranch)
+        {
+            await _context.UserBranches.AddAsync(userBranch);
+            await _context.SaveChangesAsync();
+            return userBranch;
+        }
+
+        public async Task RemoveManagerAsync(UserBranch userBranch)
+        {
+            _context.UserBranches.Remove(userBranch);
             await _context.SaveChangesAsync();
         }
     }

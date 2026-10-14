@@ -1,4 +1,4 @@
-﻿using HRMS.API.Entities;
+using HRMS.API.Entities;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -57,6 +57,14 @@ namespace HRMS.API.Service.Authentication
                     "RoleId",
                     user.RoleId.ToString())
             };
+
+                        if (user.EmployeeId.HasValue)
+            {
+                claims.Add(
+                    new Claim(
+                        "EmployeeId",
+                        user.EmployeeId.Value.ToString()));
+            }
 
             if (user.BranchId.HasValue)
             {

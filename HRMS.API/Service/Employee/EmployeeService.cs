@@ -1,4 +1,4 @@
-﻿using HRMS.API.DTOs.Employee;
+using HRMS.API.DTOs.Employee;
 using HRMS.API.DTOs.User;
 using HRMS.API.Entities;
 using HRMS.API.Interfaces.Repositories;
@@ -255,8 +255,8 @@ namespace HRMS.API.Services
                 Password = request.Password,
 
                 FirstName = request.FirstName.Trim(),
-                LastName = request.LastName?.Trim(),
-                Phone = request.Phone?.Trim()
+                LastName = request.LastName?.Trim() ?? string.Empty,
+                Phone = request.Phone?.Trim() ?? string.Empty
             };
 
             // 6. Create login user

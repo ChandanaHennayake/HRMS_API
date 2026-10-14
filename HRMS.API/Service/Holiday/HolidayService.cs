@@ -1,4 +1,4 @@
-﻿using HRMS.API.DTOs.Holiday;
+using HRMS.API.DTOs.Holiday;
 using HRMS.API.Entities;
 using HRMS.API.Repository.Holiday;
 
@@ -41,9 +41,16 @@ namespace HRMS.API.Service.Holiday
                    ?? throw new Exception("Holiday creation failed.");
         }
 
-        public async Task<IEnumerable<HolidayDto>> GetAllAsync()
+        public async Task<IEnumerable<HolidayDto>> GetAllAsync(
+            long? companyId = null,
+            int? year = null)
         {
-            return await _holidayRepository.GetAllAsync();
+            return await _holidayRepository.GetAllAsync(companyId, year);
+        }
+
+        public async Task<HolidayDto?> GetUpcomingAsync(long? companyId = null)
+        {
+            return await _holidayRepository.GetUpcomingAsync(companyId);
         }
 
         public async Task<HolidayDto?> GetByIdAsync(long id)

@@ -1,4 +1,5 @@
-﻿using HRMS.API.Entities;
+using HRMS.API.DTOs.User;
+using HRMS.API.Entities;
 
 namespace HRMS.API.Repository.UserDetails
 {
@@ -8,6 +9,8 @@ namespace HRMS.API.Repository.UserDetails
         Task<int> CreateAsync(AppUser user);
 
         Task<AppUser?> GetByIdAsync(int id);
+
+        Task<UserProfileResponse?> GetProfileAsync(int userId);
 
         Task<AppUser?> GetByUsernameAsync(string username);
 
