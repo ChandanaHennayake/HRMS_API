@@ -1,0 +1,38 @@
+**/.git
+**/.github
+**/.vs
+**/.idea
+**/*.user
+**/*.suo
+**/*.userosscache
+**/*.sln.docstates
+**/.cr
+
+# Build and compilation outputs
+**/bin/
+**/obj/
+**/publish/
+
+# Unit tests (excluded from production image)
+HRMS.Tests/
+
+# Logs and temporary files
+**/logs/
+**/*.log
+**/*.tmp
+**/*.temp
+
+# Development settings and secret files
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/appsettings.*.local.json
+**/.env
+**/.env.*
+!**/.env.example
+
+# Docker and docs
+Dockerfile*
+docker-compose*
+.dockerignore
+README.md
+*.md

@@ -79,7 +79,12 @@ public partial class DefaultContext : DbContext
     public virtual DbSet<UserBranch> UserBranches { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=ABANS_BAN;Username=postgres;Password=Nishantha@123");
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=ABANS_BAN;Username=postgres;Password=Nishantha@123");
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
