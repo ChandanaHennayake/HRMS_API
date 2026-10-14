@@ -25,22 +25,45 @@ using HRMS.API.Service.Salary;
 using HRMS.API.Service.User;
 using HRMS.API.Configurations;
 using HRMS.API.HealthChecks;
+using HRMS.API.Helpers;
 using HRMS.API.Middleware;
 using HRMS.API.Service.Email;
 using HRMS.API.Services;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Support dynamic port configuration (required for Render / cloud container hosting)
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 // Add Controllers
 builder.Services.AddControllers();
 
-// PostgreSQL DbContext
+// Enable CORS for mobile and web clients
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+// PostgreSQL DbContext with Supabase & cloud connection string resolution
 builder.Services.AddDbContext<DefaultContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    var connectionString = ConnectionStringHelper.ResolveConnectionString(builder.Configuration);
+    options.UseNpgsql(connectionString);
+});
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -143,11 +166,24 @@ builder.Services.AddHostedService<DailyAttendanceWorker>();
 var app = builder.Build();
 
 // Configure HTTP Pipeline
-if (app.Environment.IsDevelopment())
+var enableSwagger = app.Environment.IsDevelopment() ||
+                    builder.Configuration.GetValue<bool>("ENABLE_SWAGGER", false) ||
+                    builder.Configuration.GetValue<bool>("EnableSwagger", false);
+
+if (enableSwagger)
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Forwarded headers for reverse proxies (Render, AWS, Cloudflare)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+// Enable CORS
+app.UseCors("AllowAll");
 
 // Security Headers Middleware
 app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -157,7 +193,10 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+if (builder.Configuration.GetValue<bool>("ENABLE_HTTPS_REDIRECTION", false))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseRateLimiter();
 
