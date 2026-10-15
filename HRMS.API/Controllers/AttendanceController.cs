@@ -1,4 +1,5 @@
 using ABANS_BAN.DTOs.Attendance;
+using HRMS.API.Repository.UserDetails;
 using HRMS.API.Service.Attendance;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -10,11 +11,14 @@ namespace HRMS.API.Controllers
     public class AttendanceController : ControllerBase
     {
         private readonly IAttendanceService _attendanceService;
+        private readonly IUserRepository _userRepository;
 
         public AttendanceController(
-            IAttendanceService attendanceService)
+            IAttendanceService attendanceService,
+            IUserRepository userRepository)
         {
             _attendanceService = attendanceService;
+            _userRepository = userRepository;
         }
 
         // =====================================================
@@ -137,39 +141,56 @@ namespace HRMS.API.Controllers
                 // ---------------------------------------------
                 // GET LOGGED-IN EMPLOYEE ID
                 // ---------------------------------------------
-
                 var employeeIdClaim =
                     User.FindFirst("EmployeeId")?.Value
-                    ??
-                    User.FindFirst(
-                        ClaimTypes.NameIdentifier)?.Value;
+                    ?? User.FindFirst("employeeId")?.Value;
 
-                if (!long.TryParse(
-                        employeeIdClaim,
-                        out var loggedInEmployeeId))
+                long loggedInEmployeeId = 0;
+                if (!string.IsNullOrEmpty(employeeIdClaim))
+                {
+                    long.TryParse(employeeIdClaim, out loggedInEmployeeId);
+                }
+
+                // If loggedInEmployeeId is not found from claim, lookup from authenticated user's id
+                if (loggedInEmployeeId <= 0)
+                {
+                    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                   ?? User.FindFirst("sub")?.Value
+                                   ?? User.FindFirst("UserId")?.Value;
+
+                    if (int.TryParse(userIdClaim, out var uid))
+                    {
+                        var user = await _userRepository.GetByIdAsync(uid);
+                        if (user?.EmployeeId != null && user.EmployeeId.Value > 0)
+                        {
+                            loggedInEmployeeId = user.EmployeeId.Value;
+                        }
+                    }
+                }
+
+                // Fallback: If query parameter employeeId is provided
+                if (loggedInEmployeeId <= 0 && employeeId.HasValue && employeeId.Value > 0)
+                {
+                    loggedInEmployeeId = employeeId.Value;
+                }
+
+                var isAdmin =
+                    User.IsInRole("Admin") ||
+                    User.IsInRole("SuperAdmin") ||
+                    User.IsInRole("Manager");
+
+                if (loggedInEmployeeId <= 0 && !isAdmin)
                 {
                     return Unauthorized(
                         new
                         {
-                            message =
-                                "Employee ID not found in token."
+                            message = "Employee ID not found in token."
                         });
                 }
-
-
-                // ---------------------------------------------
-                // CHECK ADMIN
-                // ---------------------------------------------
-
-                var isAdmin =
-                    User.IsInRole("Admin") ||
-                    User.IsInRole("SuperAdmin");
-
 
                 // ---------------------------------------------
                 // GET HISTORY
                 // ---------------------------------------------
-
                 var result =
                     await _attendanceService
                         .GetAttendanceHistoryAsync(
@@ -178,7 +199,6 @@ namespace HRMS.API.Controllers
                             employeeId,
                             fromDate,
                             toDate);
-
 
                 return Ok(result);
             }

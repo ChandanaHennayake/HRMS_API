@@ -131,9 +131,24 @@ namespace HRMS.API.Repository.Leave
         public async Task UpdateAsync(
             LeaveRequest leaveRequest)
         {
-            _context.LeaveRequests.Update(leaveRequest);
-
-            await _context.SaveChangesAsync();
+            var existing = await _context.LeaveRequests.FindAsync(leaveRequest.Id);
+            if (existing != null)
+            {
+                existing.Status = leaveRequest.Status;
+                existing.ApprovedBy = leaveRequest.ApprovedBy;
+                existing.ApprovedAt = leaveRequest.ApprovedAt;
+                existing.RejectedBy = leaveRequest.RejectedBy;
+                existing.RejectedAt = leaveRequest.RejectedAt;
+                existing.ManagerComment = leaveRequest.ManagerComment;
+                existing.CancelledAt = leaveRequest.CancelledAt;
+                existing.UpdatedAt = DateTime.Now;
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                _context.Entry(leaveRequest).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

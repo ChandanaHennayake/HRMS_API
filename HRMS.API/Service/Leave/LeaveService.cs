@@ -321,8 +321,8 @@ namespace HRMS.API.Service.Leave
             leaveRequest.ApprovedAt =
                 DateTime.Now;
 
-            leaveRequest.ManagerComment =
-                request.Comment?.Trim();
+            var comment = request.EffectiveComment;
+            leaveRequest.ManagerComment = string.IsNullOrWhiteSpace(comment) ? "Approved" : comment;
 
             leaveRequest.UpdatedAt =
                 DateTime.Now;
@@ -340,34 +340,48 @@ namespace HRMS.API.Service.Leave
                     "Unable to load updated leave request.");
             }
 
-            await _notificationService.NotifyLeaveDecisionAsync(
-                updatedLeave.EmployeeId,
-                updatedLeave.LeaveType?.Name ?? "Leave",
-                true,
-                request.Comment);
-
-            var empForEmail = await _employeeRepository.GetEntityByIdAsync(updatedLeave.EmployeeId);
-            if (empForEmail != null && !string.IsNullOrWhiteSpace(empForEmail.Email))
+            try
             {
-                await _emailService.SendLeaveDecisionEmailAsync(
-                    empForEmail.Email,
-                    $"{empForEmail.FirstName} {empForEmail.LastName}".Trim(),
+                await _notificationService.NotifyLeaveDecisionAsync(
+                    updatedLeave.EmployeeId,
                     updatedLeave.LeaveType?.Name ?? "Leave",
-                    updatedLeave.FromDate,
-                    updatedLeave.ToDate,
-                    updatedLeave.TotalDays,
                     true,
-                    request.Comment);
+                    leaveRequest.ManagerComment);
+
+                var empForEmail = await _employeeRepository.GetEntityByIdAsync(updatedLeave.EmployeeId);
+                if (empForEmail != null && !string.IsNullOrWhiteSpace(empForEmail.Email))
+                {
+                    await _emailService.SendLeaveDecisionEmailAsync(
+                        empForEmail.Email,
+                        $"{empForEmail.FirstName} {empForEmail.LastName}".Trim(),
+                        updatedLeave.LeaveType?.Name ?? "Leave",
+                        updatedLeave.FromDate,
+                        updatedLeave.ToDate,
+                        updatedLeave.TotalDays,
+                        true,
+                        leaveRequest.ManagerComment);
+                }
+            }
+            catch
+            {
+                // Non-fatal notification/email failure
             }
 
-            await _auditService.LogEntityActionAsync(
-                approvedBy != 0 ? (int)approvedBy : null,
-                null,
-                "Approve",
-                "LeaveRequest",
-                updatedLeave.Id.ToString(),
-                $"Approved leave request #{updatedLeave.Id} ({updatedLeave.LeaveType?.Name}) for Employee #{updatedLeave.EmployeeId}. Comment: {request.Comment}",
-                severity: "Info");
+            try
+            {
+                await _auditService.LogEntityActionAsync(
+                    approvedBy != 0 ? (int)approvedBy : null,
+                    null,
+                    "Approve",
+                    "LeaveRequest",
+                    updatedLeave.Id.ToString(),
+                    $"Approved leave request #{updatedLeave.Id} ({updatedLeave.LeaveType?.Name}) for Employee #{updatedLeave.EmployeeId}. Comment: {leaveRequest.ManagerComment}",
+                    severity: "Info");
+            }
+            catch
+            {
+                // Non-fatal audit log failure
+            }
 
             return MapToDto(updatedLeave);
         }
@@ -399,11 +413,10 @@ namespace HRMS.API.Service.Leave
                     "Only pending leave requests can be rejected.");
             }
 
-            if (string.IsNullOrWhiteSpace(
-                request.Comment))
+            var rejectComment = request.EffectiveComment;
+            if (string.IsNullOrWhiteSpace(rejectComment))
             {
-                throw new Exception(
-                    "Comment is required when rejecting leave.");
+                rejectComment = "Rejected by manager";
             }
 
             // Revert pending days in leave balance
@@ -435,7 +448,7 @@ namespace HRMS.API.Service.Leave
                 DateTime.Now;
 
             leaveRequest.ManagerComment =
-                request.Comment.Trim();
+                rejectComment;
 
             leaveRequest.UpdatedAt =
                 DateTime.Now;

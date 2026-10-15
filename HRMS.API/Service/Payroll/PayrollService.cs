@@ -474,5 +474,428 @@ namespace HRMS.API.Service.Payroll
 
             return dto;
         }
+
+        public async Task<EmployeePayrollPreviewDto> GetEmployeePayrollPreviewAsync(
+            long employeeId,
+            int year,
+            int month,
+            DateOnly? startDate = null,
+            DateOnly? endDate = null)
+        {
+            var emp = await _context.Employees
+                .Include(e => e.Department)
+                .Include(e => e.Designation)
+                .FirstOrDefaultAsync(e => e.Id == employeeId);
+
+            if (emp == null)
+            {
+                throw new Exception("Employee not found.");
+            }
+
+            string? branchName = null;
+            if (emp.BranchId > 0)
+            {
+                var branch = await _context.Branches.AsNoTracking().FirstOrDefaultAsync(b => b.branchid == (int)emp.BranchId);
+                branchName = branch?.branchname;
+            }
+
+            var start = startDate ?? new DateOnly(year, month, 1);
+            var end = endDate ?? new DateOnly(year, month, DateTime.DaysInMonth(year, month));
+
+            if (end < start)
+            {
+                var temp = start;
+                start = end;
+                end = temp;
+            }
+
+            var salary = await _salaryRepository.GetEmployeeSalaryAsync(employeeId);
+            decimal baseSalary = salary?.BaseSalary ?? 0m;
+            decimal workingDays = 26m;
+            decimal dailyRate = baseSalary > 0 ? Math.Round(baseSalary / workingDays, 2) : 0m;
+            decimal hourlyOtRate = dailyRate > 0 ? Math.Round((dailyRate / 8m) * 1.5m, 2) : 0m;
+
+            // Company Holidays in date range
+            var holidayDates = await _context.Holidays
+                .Where(h => h.CompanyId == emp.CompanyId && h.IsActive && h.HolidayDate >= start && h.HolidayDate <= end)
+                .Select(h => h.HolidayDate)
+                .ToListAsync();
+            var holidaySet = new HashSet<DateOnly>(holidayDates);
+
+            // Attendance records in date range
+            var attendances = await _context.Attendances
+                .Where(a => a.EmployeeId == employeeId && a.AttendanceDate >= start && a.AttendanceDate <= end)
+                .ToListAsync();
+
+            // Total calendar days
+            int totalCalendarDays = (end.ToDateTime(TimeOnly.MinValue) - start.ToDateTime(TimeOnly.MinValue)).Days + 1;
+
+            // Count Sundays and Holidays
+            int sundaysCount = 0;
+            for (var d = start; d <= end; d = d.AddDays(1))
+            {
+                if (d.DayOfWeek == DayOfWeek.Sunday)
+                {
+                    sundaysCount++;
+                }
+            }
+
+            // Worked days: Present (Status == 1) or checked in or worked minutes > 0
+            int workedDays = attendances.Count(a => a.Status == 1 || a.CheckInTime != null || a.WorkedMinutes > 0);
+
+            // Total Overtime hours
+            int totalOtMinutes = attendances.Sum(a => a.OTMinutes);
+            decimal otHours = Math.Round((decimal)totalOtMinutes / 60m, 2);
+            decimal suggestedOtPay = Math.Round(otHours * hourlyOtRate, 2);
+
+            // Detected absent / no-pay days
+            // NEVER count Company Holidays or Sundays as Absent!
+            decimal absentDays = attendances.Count(a => a.Status == 0 && !holidaySet.Contains(a.AttendanceDate) && a.AttendanceDate.DayOfWeek != DayOfWeek.Sunday);
+
+            // Check unpaid approved leaves
+            var unpaidLeaves = await _context.LeaveRequests
+                .Include(l => l.LeaveType)
+                .Where(l => l.EmployeeId == employeeId && l.Status == 1 && l.LeaveType != null && !l.LeaveType.IsPaid && l.FromDate <= end && l.ToDate >= start)
+                .ToListAsync();
+
+            foreach (var leave in unpaidLeaves)
+            {
+                var lStart = leave.FromDate < start ? start : leave.FromDate;
+                var lEnd = leave.ToDate > end ? end : leave.ToDate;
+                for (var ld = lStart; ld <= lEnd; ld = ld.AddDays(1))
+                {
+                    if (ld.DayOfWeek != DayOfWeek.Sunday && !holidaySet.Contains(ld))
+                    {
+                        if (!attendances.Any(a => a.AttendanceDate == ld && a.Status == 0))
+                        {
+                            absentDays += 1;
+                        }
+                    }
+                }
+            }
+
+            decimal suggestedNoPay = Math.Round(absentDays * dailyRate, 2);
+
+            var preview = new EmployeePayrollPreviewDto
+            {
+                EmployeeId = emp.Id,
+                EmployeeName = $"{emp.FirstName} {emp.LastName}".Trim(),
+                EmployeeCode = emp.EmployeeCode,
+                DepartmentName = emp.Department?.Name,
+                DesignationName = emp.Designation?.Name,
+                BranchName = branchName,
+                BankName = salary?.BankName ?? emp.City,
+                BankAccountNo = salary?.BankAccountNo ?? emp.AddressLine2,
+                BaseSalary = baseSalary,
+                StartDate = start,
+                EndDate = end,
+                TotalCalendarDays = totalCalendarDays,
+                WorkedDays = workedDays,
+                HolidaysCount = holidaySet.Count,
+                SundaysCount = sundaysCount,
+                WorkingDaysDivisor = workingDays,
+                SuggestedDailyRate = dailyRate,
+                DetectedAbsentDays = absentDays,
+                SuggestedNoPayDeduction = suggestedNoPay,
+                OtHours = otHours,
+                HourlyOtRate = hourlyOtRate,
+                SuggestedOtPay = suggestedOtPay
+            };
+
+            if (salary?.Components != null)
+            {
+                foreach (var c in salary.Components)
+                {
+                    if (c.SalaryComponent != null && c.SalaryComponent.IsActive)
+                    {
+                        if (c.SalaryComponent.ComponentType == 1) // Earning
+                        {
+                            preview.StandardAllowances.Add(new PayrollManualItemDto
+                            {
+                                Name = c.SalaryComponent.Name,
+                                Amount = c.Amount,
+                                IsEpfApplicable = c.SalaryComponent.IsEpfApplicable
+                            });
+                        }
+                        else if (c.SalaryComponent.ComponentType == 2) // Deduction
+                        {
+                            preview.StandardDeductions.Add(new PayrollManualItemDto
+                            {
+                                Name = c.SalaryComponent.Name,
+                                Amount = c.Amount
+                            });
+                        }
+                    }
+                }
+            }
+
+            return preview;
+        }
+
+        public async Task<PayslipDto> SaveIndividualPayrollAsync(IndividualPayrollRequestDto request, long savedBy)
+        {
+            var emp = await _context.Employees
+                .Include(e => e.Department)
+                .Include(e => e.Designation)
+                .FirstOrDefaultAsync(e => e.Id == request.EmployeeId);
+
+            if (emp == null)
+            {
+                throw new Exception("Employee not found.");
+            }
+
+            // 1. Ensure or retrieve PayrollPeriod
+            var period = await _payrollRepository.GetPeriodAsync(emp.CompanyId, request.Year, request.Month);
+            if (period == null)
+            {
+                var startDate = request.StartDate ?? new DateOnly(request.Year, request.Month, 1);
+                var endDate = request.EndDate ?? new DateOnly(request.Year, request.Month, DateTime.DaysInMonth(request.Year, request.Month));
+                var periodName = $"{startDate:dd MMM yyyy} - {endDate:dd MMM yyyy}";
+
+                period = await _payrollRepository.CreatePeriodAsync(new PayrollPeriod
+                {
+                    CompanyId = emp.CompanyId,
+                    Year = request.Year,
+                    Month = request.Month,
+                    Name = periodName,
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    IsClosed = false
+                });
+            }
+
+            // 2. Ensure or retrieve a PayrollRun for this period and branch
+            var run = await _context.PayrollRuns
+                .FirstOrDefaultAsync(r => r.PayrollPeriodId == period.Id && (r.BranchId == (int)emp.BranchId || r.BranchId == null));
+
+            if (run == null)
+            {
+                run = new PayrollRun
+                {
+                    CompanyId = emp.CompanyId,
+                    BranchId = (int)emp.BranchId,
+                    PayrollPeriodId = period.Id,
+                    Status = 0, // Draft
+                    ProcessedCount = 0,
+                    ProcessedBy = savedBy,
+                    ProcessedAt = DateTime.Now,
+                    Comments = $"Payroll Run - {period.Name}"
+                };
+
+                await _context.PayrollRuns.AddAsync(run);
+                await _context.SaveChangesAsync();
+            }
+
+            // 3. Mathematical Calculations
+            decimal totalAllowances = request.Allowances?.Sum(a => a.Amount) ?? 0m;
+            decimal grossEarnings = request.BaseSalary + totalAllowances + request.OvertimePay;
+
+            decimal noPayDeduction = request.NoPayDeduction > 0
+                ? request.NoPayDeduction
+                : (request.NoPayDays * request.PerDayRate);
+
+            decimal epfApplicableAllowances = request.Allowances?.Where(a => a.IsEpfApplicable).Sum(a => a.Amount) ?? 0m;
+            decimal grossEpfSalary = Math.Max(0m, request.BaseSalary + epfApplicableAllowances - noPayDeduction);
+
+            decimal employeeEpf = request.DeductEpf
+                ? Math.Round(grossEpfSalary * (request.EmployeeEpfRate / 100m), 2)
+                : 0m;
+            decimal employerEpf = request.DeductEpf
+                ? Math.Round(grossEpfSalary * (request.EmployerEpfRate / 100m), 2)
+                : 0m;
+            decimal employerEtf = request.DeductEpf
+                ? Math.Round(grossEpfSalary * (request.EmployerEtfRate / 100m), 2)
+                : 0m;
+
+            decimal otherDeductions = request.Deductions?.Sum(d => d.Amount) ?? 0m;
+            decimal totalDeductions = noPayDeduction + employeeEpf + otherDeductions;
+            decimal netSalary = Math.Max(0m, grossEarnings - totalDeductions);
+
+            // 4. Find existing Payslip or create new
+            var payslip = await _context.Payslips
+                .Include(p => p.Items)
+                .FirstOrDefaultAsync(p => p.EmployeeId == request.EmployeeId && p.PeriodId == period.Id);
+
+            if (payslip == null)
+            {
+                payslip = new Payslip
+                {
+                    PayrollRunId = run.Id,
+                    PeriodId = period.Id,
+                    EmployeeId = request.EmployeeId,
+                    CreatedAt = DateTime.Now
+                };
+
+                await _context.Payslips.AddAsync(payslip);
+            }
+            else
+            {
+                // Remove existing items to replace with updated breakdown
+                if (payslip.Items != null && payslip.Items.Any())
+                {
+                    _context.PayslipItems.RemoveRange(payslip.Items);
+                }
+            }
+
+            payslip.PayrollRunId = run.Id;
+            payslip.PeriodId = period.Id;
+            payslip.BaseSalary = request.BaseSalary;
+            payslip.TotalAllowances = totalAllowances;
+            payslip.OvertimeHours = request.OvertimeHours;
+            payslip.OvertimePay = request.OvertimePay;
+            payslip.GrossEarnings = grossEarnings;
+
+            payslip.NoPayDays = request.NoPayDays;
+            payslip.NoPayDeduction = noPayDeduction;
+            payslip.GrossEpfSalary = grossEpfSalary;
+            payslip.EmployeeEpf = employeeEpf;
+            payslip.EmployerEpf = employerEpf;
+            payslip.EmployerEtf = employerEtf;
+            payslip.OtherDeductions = otherDeductions;
+            payslip.TotalDeductions = totalDeductions;
+            payslip.NetSalary = netSalary;
+            payslip.PaymentStatus = request.PaymentStatus ?? "Unpaid";
+            payslip.PaymentDate = request.PaymentStatus == "Paid" ? DateTime.Now : null;
+
+            await _context.SaveChangesAsync();
+
+            // 5. Populate Payslip Items
+            var itemsToAdd = new List<PayslipItem>();
+
+            if (request.Allowances != null)
+            {
+                foreach (var al in request.Allowances.Where(x => x.Amount > 0))
+                {
+                    itemsToAdd.Add(new PayslipItem
+                    {
+                        PayslipId = payslip.Id,
+                        Name = al.Name,
+                        Code = al.Name.Replace(" ", "_").ToUpper(),
+                        ItemType = 1, // Earning
+                        Amount = al.Amount,
+                        IsEpfApplicable = al.IsEpfApplicable,
+                        IsTaxable = true
+                    });
+                }
+            }
+
+            if (request.Deductions != null)
+            {
+                foreach (var de in request.Deductions.Where(x => x.Amount > 0))
+                {
+                    itemsToAdd.Add(new PayslipItem
+                    {
+                        PayslipId = payslip.Id,
+                        Name = de.Name,
+                        Code = de.Name.Replace(" ", "_").ToUpper(),
+                        ItemType = 2, // Deduction
+                        Amount = de.Amount,
+                        IsEpfApplicable = false,
+                        IsTaxable = false
+                    });
+                }
+            }
+
+            if (noPayDeduction > 0)
+            {
+                itemsToAdd.Add(new PayslipItem
+                {
+                    PayslipId = payslip.Id,
+                    Name = $"No-Pay Deduction ({request.NoPayDays:0.#} days @ {request.PerDayRate:0.00}/day)",
+                    Code = "NO_PAY",
+                    ItemType = 2,
+                    Amount = noPayDeduction,
+                    IsEpfApplicable = false,
+                    IsTaxable = false
+                });
+            }
+
+            if (employeeEpf > 0)
+            {
+                itemsToAdd.Add(new PayslipItem
+                {
+                    PayslipId = payslip.Id,
+                    Name = $"EPF Employee ({request.EmployeeEpfRate}%)",
+                    Code = "EPF_EMP",
+                    ItemType = 2,
+                    Amount = employeeEpf,
+                    IsEpfApplicable = true,
+                    IsTaxable = false
+                });
+            }
+
+            if (itemsToAdd.Any())
+            {
+                await _context.PayslipItems.AddRangeAsync(itemsToAdd);
+                await _context.SaveChangesAsync();
+            }
+
+            // 6. Recalculate Run totals
+            var allSlips = await _context.Payslips
+                .Where(p => p.PayrollRunId == run.Id)
+                .ToListAsync();
+
+            run.TotalGross = allSlips.Sum(s => s.GrossEarnings);
+            run.TotalNet = allSlips.Sum(s => s.NetSalary);
+            run.TotalEmployerCost = allSlips.Sum(s => s.GrossEarnings + s.EmployerEpf + s.EmployerEtf);
+            run.ProcessedCount = allSlips.Count;
+
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogSecurityEventAsync(
+                (int)savedBy,
+                "PayrollUser",
+                "SaveIndividualPayroll",
+                $"Saved individual payslip for employee #{emp.Id} ({emp.FirstName} {emp.LastName}) for period {period.Name}: Net {netSalary:0.00}",
+                null,
+                true);
+
+            return (await GetPayslipDetailsAsync(payslip.Id))!;
+        }
+
+        public async Task DeletePayslipAsync(long payslipId, long deletedBy)
+        {
+            var payslip = await _context.Payslips
+                .Include(p => p.Items)
+                .FirstOrDefaultAsync(p => p.Id == payslipId);
+
+            if (payslip == null)
+            {
+                throw new Exception("Payslip not found.");
+            }
+
+            var runId = payslip.PayrollRunId;
+
+            if (payslip.Items != null && payslip.Items.Any())
+            {
+                _context.PayslipItems.RemoveRange(payslip.Items);
+            }
+
+            _context.Payslips.Remove(payslip);
+            await _context.SaveChangesAsync();
+
+            var run = await _context.PayrollRuns.FindAsync(runId);
+            if (run != null)
+            {
+                var remaining = await _context.Payslips
+                    .Where(p => p.PayrollRunId == runId)
+                    .ToListAsync();
+
+                run.TotalGross = remaining.Sum(s => s.GrossEarnings);
+                run.TotalNet = remaining.Sum(s => s.NetSalary);
+                run.TotalEmployerCost = remaining.Sum(s => s.GrossEarnings + s.EmployerEpf + s.EmployerEtf);
+                run.ProcessedCount = remaining.Count;
+
+                await _context.SaveChangesAsync();
+            }
+
+            await _auditService.LogSecurityEventAsync(
+                (int)deletedBy,
+                "PayrollUser",
+                "DeletePayslip",
+                $"Deleted payslip #{payslipId}",
+                null,
+                true);
+        }
     }
 }

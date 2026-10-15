@@ -221,5 +221,94 @@ namespace HRMS.API.Controllers
                 });
             }
         }
+
+        // =====================================================
+        // PREVIEW INDIVIDUAL EMPLOYEE PAYROLL
+        // GET: api/Payroll/employee/5/preview?year=2026&month=10&startDate=2026-10-01&endDate=2026-10-31
+        // =====================================================
+        [HttpGet("employee/{employeeId:long}/preview")]
+        public async Task<IActionResult> GetEmployeePayrollPreview(
+            long employeeId,
+            [FromQuery] int? year = null,
+            [FromQuery] int? month = null,
+            [FromQuery] DateOnly? startDate = null,
+            [FromQuery] DateOnly? endDate = null)
+        {
+            try
+            {
+                int targetYear = year ?? (startDate.HasValue ? startDate.Value.Year : DateTime.Now.Year);
+                int targetMonth = month ?? (startDate.HasValue ? startDate.Value.Month : DateTime.Now.Month);
+
+                var result = await _payrollService.GetEmployeePayrollPreviewAsync(employeeId, targetYear, targetMonth, startDate, endDate);
+                return Ok(new
+                {
+                    success = true,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        // =====================================================
+        // CREATE / UPDATE INDIVIDUAL EMPLOYEE PAYSLIP
+        // POST: api/Payroll/individual?savedBy=1
+        // =====================================================
+        [HttpPost("individual")]
+        public async Task<IActionResult> SaveIndividualPayroll(
+            [FromBody] IndividualPayrollRequestDto request,
+            [FromQuery] long savedBy = 1)
+        {
+            try
+            {
+                var result = await _payrollService.SaveIndividualPayrollAsync(request, savedBy);
+                return Ok(new
+                {
+                    success = true,
+                    message = "Employee payslip created/updated successfully.",
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        // =====================================================
+        // DELETE PAYSLIP
+        // DELETE: api/Payroll/payslip/10?deletedBy=1
+        // =====================================================
+        [HttpDelete("payslip/{id:long}")]
+        public async Task<IActionResult> DeletePayslip(long id, [FromQuery] long deletedBy = 1)
+        {
+            try
+            {
+                await _payrollService.DeletePayslipAsync(id, deletedBy);
+                return Ok(new
+                {
+                    success = true,
+                    message = "Payslip deleted successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
     }
 }
