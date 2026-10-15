@@ -10,6 +10,7 @@ namespace HRMS.API.DTOs.Notice
         public string? ImageUrl { get; set; }
         public bool IsActive { get; set; }
         public string TargetRole { get; set; } = "All";
+        public string TargetAudience => TargetRole;
         public DateTime CreatedAt { get; set; }
         public int? CreatedBy { get; set; }
     }
@@ -21,5 +22,6 @@ namespace HRMS.API.DTOs.Notice
         public string? ImageUrl { get; set; }
         public bool IsActive { get; set; } = true;
         public string TargetRole { get; set; } = "All";
+        public string? TargetAudience { get; set; }
     }
 }

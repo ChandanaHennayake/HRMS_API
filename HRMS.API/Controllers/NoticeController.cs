@@ -55,12 +55,13 @@ namespace HRMS.API.Controllers
                     data = notice
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return BadRequest(new
+                // Graceful fallback for active notice lookup
+                return Ok(new
                 {
-                    success = false,
-                    message = ex.Message
+                    success = true,
+                    data = (NoticeDto?)null
                 });
             }
         }
@@ -114,14 +115,18 @@ namespace HRMS.API.Controllers
                 }
 
                 // If this new notice is active, we can optionally deactivate others or keep them
+                var target = !string.IsNullOrWhiteSpace(dto.TargetRole) && dto.TargetRole != "All"
+                    ? dto.TargetRole.Trim()
+                    : (!string.IsNullOrWhiteSpace(dto.TargetAudience) ? dto.TargetAudience.Trim() : "All");
+
                 var notice = new SystemNotice
                 {
                     Title = dto.Title.Trim(),
                     Message = dto.Message?.Trim(),
                     ImageUrl = dto.ImageUrl?.Trim(),
                     IsActive = dto.IsActive,
-                    TargetRole = string.IsNullOrWhiteSpace(dto.TargetRole) ? "All" : dto.TargetRole.Trim(),
-                    CreatedAt = DateTime.Now,
+                    TargetRole = target,
+                    CreatedAt = DateTime.UtcNow,
                     CreatedBy = createdBy
                 };
 

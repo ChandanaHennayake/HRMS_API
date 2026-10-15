@@ -23,7 +23,7 @@ namespace HRMS.API.Entities
         [StringLength(50)]
         public string TargetRole { get; set; } = "All";
 
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int? CreatedBy { get; set; }
     }

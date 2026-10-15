@@ -197,6 +197,31 @@ builder.Services.AddHostedService<DailyAttendanceWorker>();
 
 var app = builder.Build();
 
+// Ensure dynamic PostgreSQL tables exist
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<DefaultContext>();
+        db.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""SystemNotice"" (
+                ""Id"" BIGSERIAL PRIMARY KEY,
+                ""Title"" VARCHAR(200) NOT NULL,
+                ""Message"" TEXT,
+                ""ImageUrl"" TEXT,
+                ""IsActive"" BOOLEAN NOT NULL DEFAULT TRUE,
+                ""TargetRole"" VARCHAR(50) NOT NULL DEFAULT 'All',
+                ""CreatedAt"" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                ""CreatedBy"" INTEGER
+            );
+        ");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Startup] SystemNotice table initialization notice: {ex.Message}");
+    }
+}
+
 // Configure HTTP Pipeline
 var enableSwagger = app.Environment.IsDevelopment() ||
                     builder.Configuration.GetValue<bool>("ENABLE_SWAGGER", false) ||
