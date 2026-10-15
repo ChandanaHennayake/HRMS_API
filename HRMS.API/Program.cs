@@ -64,9 +64,21 @@ builder.Services.AddCors(options =>
 
 // Configure JWT Bearer Authentication
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "HRMS_SUPER_SECRET_JWT_KEY_2026_SECURE_123456789";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HRMS.API";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HRMS.Client";
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+    jwtKey = "HRMS_SUPER_SECRET_JWT_KEY_2026_SECURE_123456789";
+}
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+if (string.IsNullOrWhiteSpace(jwtIssuer))
+{
+    jwtIssuer = "HRMS.API";
+}
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+if (string.IsNullOrWhiteSpace(jwtAudience))
+{
+    jwtAudience = "HRMS.Client";
+}
 
 builder.Services.AddAuthentication(options =>
 {
@@ -239,6 +251,30 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
+// Global exception logging middleware
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[HTTP 500 Unhandled Exception] {context.Request.Method} {context.Request.Path}: {ex.Message}");
+        if (!context.Response.HasStarted)
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                success = false,
+                message = "An unexpected server error occurred.",
+                error = ex.Message
+            }));
+        }
+    }
+});
+
 // Enable CORS
 app.UseCors("AllowAll");
 
@@ -284,5 +320,13 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 });
 
 app.MapControllers();
+app.MapGet("/", () => Results.Ok(new
+{
+    service = "AlienHR Web API",
+    status = "Online",
+    environment = app.Environment.EnvironmentName,
+    health = "/health",
+    version = "1.0.0"
+}));
 
 app.Run();
