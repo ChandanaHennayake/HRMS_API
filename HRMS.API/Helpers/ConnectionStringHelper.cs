@@ -11,17 +11,19 @@ namespace HRMS.API.Helpers
         /// </summary>
         public static string ResolveConnectionString(IConfiguration configuration)
         {
-            var connStr = configuration.GetConnectionString("DefaultConnection");
+            // 1. Check explicit cloud environment variables FIRST (Render, Supabase, Railway)
+            var connStr = configuration["DATABASE_URL"] ?? configuration["SUPABASE_CONNECTION_STRING"];
 
+            // 2. Fallback to ConnectionStrings:DefaultConnection
             if (string.IsNullOrWhiteSpace(connStr))
             {
-                connStr = configuration["DATABASE_URL"] ?? configuration["SUPABASE_CONNECTION_STRING"];
+                connStr = configuration.GetConnectionString("DefaultConnection");
             }
 
             if (string.IsNullOrWhiteSpace(connStr))
             {
                 throw new InvalidOperationException(
-                    "Database connection string is not configured. Set 'ConnectionStrings__DefaultConnection' or 'DATABASE_URL'.");
+                    "Database connection string is not configured. Set 'DATABASE_URL' or 'ConnectionStrings__DefaultConnection'.");
             }
 
             return NormalizeConnectionString(connStr);
