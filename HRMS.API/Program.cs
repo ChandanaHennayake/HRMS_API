@@ -39,6 +39,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Threading.RateLimiting;
 
+// Enable legacy timestamp behavior for Npgsql to prevent Kind=Local timestamp without time zone cast errors
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Support dynamic port configuration (required for Render / cloud container hosting)
@@ -106,7 +109,11 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddDbContext<DefaultContext>(options =>
 {
     var connectionString = ConnectionStringHelper.ResolveConnectionString(builder.Configuration);
-    options.UseNpgsql(connectionString);
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+        npgsqlOptions.CommandTimeout(30);
+    });
 });
 
 // Swagger

@@ -92,7 +92,12 @@ namespace HRMS.API.Repository.UserDetails
 
         public async Task UpdateAsync(AppUser user)
         {
-            _context.AppUsers.Update(user);
+            var entry = _context.Entry(user);
+            if (entry.State == EntityState.Detached)
+            {
+                _context.AppUsers.Attach(user);
+                entry.State = EntityState.Modified;
+            }
             await _context.SaveChangesAsync();
         }
 

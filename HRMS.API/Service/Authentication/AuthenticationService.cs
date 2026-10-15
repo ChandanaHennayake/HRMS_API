@@ -100,7 +100,7 @@ namespace HRMS.API.Service.Authentication
             user.FailedLoginAttempts = 0;
             user.IsLocked = false;
             user.LockoutEnd = null;
-            user.LastLogin = DateTime.Now;
+            user.LastLogin = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
             await _userRepository.UpdateAsync(user);
 
@@ -113,9 +113,9 @@ namespace HRMS.API.Service.Authentication
             {
                 userid = user.UserId,
                 token = refreshTokenString,
-                expirydate = DateTime.Now.AddDays(7),
+                expirydate = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Unspecified),
                 isrevoked = false,
-                createddate = DateTime.Now
+                createddate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
             };
 
             await _context.RefreshTokens.AddAsync(refreshTokenEntity);
@@ -175,9 +175,9 @@ namespace HRMS.API.Service.Authentication
             {
                 userid = user.UserId,
                 token = newRefreshTokenString,
-                expirydate = DateTime.Now.AddDays(7),
+                expirydate = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(7), DateTimeKind.Unspecified),
                 isrevoked = false,
-                createddate = DateTime.Now
+                createddate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
             };
 
             await _context.RefreshTokens.AddAsync(newRefreshTokenEntity);
