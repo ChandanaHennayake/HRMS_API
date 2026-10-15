@@ -131,4 +131,67 @@ namespace HRMS.API.DTOs.Payroll
         public bool IsEpfApplicable { get; set; }
         public bool IsTaxable { get; set; }
     }
+
+    public class IndividualPayrollRequestDto
+    {
+        public long EmployeeId { get; set; }
+        public int Year { get; set; } = DateTime.Now.Year;
+        public int Month { get; set; } = DateTime.Now.Month;
+        public DateOnly? StartDate { get; set; }
+        public DateOnly? EndDate { get; set; }
+        public int? WorkedDays { get; set; }
+        public decimal BaseSalary { get; set; }
+        public decimal WorkingDaysDivisor { get; set; } = 26;
+        public decimal PerDayRate { get; set; }
+        public decimal NoPayDays { get; set; }
+        public decimal NoPayDeduction { get; set; }
+        public decimal OvertimeHours { get; set; }
+        public decimal OvertimeRate { get; set; }
+        public decimal OvertimePay { get; set; }
+        public bool DeductEpf { get; set; } = true;
+        public decimal EmployeeEpfRate { get; set; } = 8;
+        public decimal EmployerEpfRate { get; set; } = 12;
+        public decimal EmployerEtfRate { get; set; } = 3;
+        public string PaymentStatus { get; set; } = "Unpaid";
+        public string PaymentMode { get; set; } = "Bank Transfer";
+        public string? Comments { get; set; }
+        public List<PayrollManualItemDto> Allowances { get; set; } = new();
+        public List<PayrollManualItemDto> Deductions { get; set; } = new();
+    }
+
+    public class PayrollManualItemDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public bool IsEpfApplicable { get; set; } = false;
+    }
+
+    public class EmployeePayrollPreviewDto
+    {
+        public long EmployeeId { get; set; }
+        public string EmployeeName { get; set; } = string.Empty;
+        public string EmployeeCode { get; set; } = string.Empty;
+        public string? DepartmentName { get; set; }
+        public string? DesignationName { get; set; }
+        public string? BranchName { get; set; }
+        public string? BankName { get; set; }
+        public string? BankAccountNo { get; set; }
+        public decimal BaseSalary { get; set; }
+        public DateOnly StartDate { get; set; }
+        public DateOnly EndDate { get; set; }
+        public int TotalCalendarDays { get; set; }
+        public int WorkedDays { get; set; }
+        public int HolidaysCount { get; set; }
+        public int SundaysCount { get; set; }
+        public decimal WorkingDaysDivisor { get; set; } = 26;
+        public decimal SuggestedDailyRate { get; set; }
+        public decimal DetectedAbsentDays { get; set; }
+        public decimal SuggestedNoPayDeduction { get; set; }
+        public decimal OtHours { get; set; }
+        public decimal HourlyOtRate { get; set; }
+        public decimal SuggestedOtPay { get; set; }
+        public List<PayrollManualItemDto> StandardAllowances { get; set; } = new();
+        public List<PayrollManualItemDto> StandardDeductions { get; set; } = new();
+    }
 }
+

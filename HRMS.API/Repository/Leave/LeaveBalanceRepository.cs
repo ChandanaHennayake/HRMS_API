@@ -44,9 +44,20 @@ namespace HRMS.API.Repository.Leave
 
         public async Task UpdateAsync(EmployeeLeaveBalance balance)
         {
-            balance.UpdatedAt = DateTime.Now;
-            _context.EmployeeLeaveBalances.Update(balance);
-            await _context.SaveChangesAsync();
+            var existing = await _context.EmployeeLeaveBalances.FindAsync(balance.Id);
+            if (existing != null)
+            {
+                existing.PendingDays = balance.PendingDays;
+                existing.UsedDays = balance.UsedDays;
+                existing.AllocatedDays = balance.AllocatedDays;
+                existing.UpdatedAt = DateTime.Now;
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                _context.Entry(balance).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+            }
         }
 
         public async Task EnsureBalancesAsync(long employeeId, int year, long companyId)

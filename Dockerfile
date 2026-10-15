@@ -1,6 +1,6 @@
 # ====================================================================
 # AlienHR Web API — Production Multi-Stage Dockerfile (.NET 9.0)
-# Supports free cloud deployment on Render with Supabase PostgreSQL
+# Supports cloud deployment (Render, Railway, Docker Hub, Fly.io, etc.)
 # ====================================================================
 
 # Stage 1: Build & Publish using official Microsoft .NET 9.0 SDK
@@ -28,18 +28,18 @@ RUN dotnet publish "HRMS.API.csproj" \
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 
-# Run as official non-root user ($APP_UID = 1654 in .NET 9)
-USER $APP_UID
-
 # Copy compiled binaries from build stage
-COPY --from=build --chown=$APP_UID:$APP_UID /app/publish .
+COPY --from=build /app/publish .
 
-# Expose default HTTP port (Render dynamically sets PORT env var)
+# Expose default HTTP ports (Render/Railway dynamically bind PORT env var)
 EXPOSE 8080
+EXPOSE 5000
+EXPOSE 80
 
 # Environment defaults
 ENV ASPNETCORE_ENVIRONMENT=Production \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
-    ASPNETCORE_HTTP_PORTS=8080
+    ASPNETCORE_HTTP_PORTS=8080 \
+    ASPNETCORE_URLS=http://+:8080
 
 ENTRYPOINT ["dotnet", "HRMS.API.dll"]

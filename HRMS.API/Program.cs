@@ -29,10 +29,14 @@ using HRMS.API.Helpers;
 using HRMS.API.Middleware;
 using HRMS.API.Service.Email;
 using HRMS.API.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -56,6 +60,34 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
+});
+
+// Configure JWT Bearer Authentication
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "HRMS_SUPER_SECRET_JWT_KEY_2026_SECURE_123456789";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "HRMS.API";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "HRMS.Client";
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = jwtAudience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
 });
 
 // PostgreSQL DbContext with Supabase & cloud connection string resolution
@@ -165,6 +197,31 @@ builder.Services.AddHostedService<DailyAttendanceWorker>();
 
 var app = builder.Build();
 
+// Ensure dynamic PostgreSQL tables exist
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<DefaultContext>();
+        db.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""SystemNotice"" (
+                ""Id"" BIGSERIAL PRIMARY KEY,
+                ""Title"" VARCHAR(200) NOT NULL,
+                ""Message"" TEXT,
+                ""ImageUrl"" TEXT,
+                ""IsActive"" BOOLEAN NOT NULL DEFAULT TRUE,
+                ""TargetRole"" VARCHAR(50) NOT NULL DEFAULT 'All',
+                ""CreatedAt"" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                ""CreatedBy"" INTEGER
+            );
+        ");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Startup] SystemNotice table initialization notice: {ex.Message}");
+    }
+}
+
 // Configure HTTP Pipeline
 var enableSwagger = app.Environment.IsDevelopment() ||
                     builder.Configuration.GetValue<bool>("ENABLE_SWAGGER", false) ||
@@ -200,6 +257,7 @@ if (builder.Configuration.GetValue<bool>("ENABLE_HTTPS_REDIRECTION", false))
 
 app.UseRateLimiter();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 // Production Health Checks endpoint

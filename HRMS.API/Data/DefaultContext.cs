@@ -78,6 +78,8 @@ public partial class DefaultContext : DbContext
 
     public virtual DbSet<UserBranch> UserBranches { get; set; }
 
+    public virtual DbSet<SystemNotice> SystemNotices { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
