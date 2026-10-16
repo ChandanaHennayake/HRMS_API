@@ -82,7 +82,14 @@ namespace HRMS.API.Service.Authentication
                     user.LockoutEnd = DateTime.Now.AddMinutes(15);
                 }
 
-                await _userRepository.UpdateAsync(user);
+                try
+                {
+                    await _userRepository.UpdateAsync(user);
+                }
+                catch
+                {
+                    // Fail gracefully if DB row is temporarily locked so the user receives an immediate 400 Bad Request instead of a 30s timeout
+                }
 
                 if (user.IsLocked == true)
                 {
