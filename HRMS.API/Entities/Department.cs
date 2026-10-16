@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -15,9 +15,11 @@ public partial class Department
 
     public long CompanyId { get; set; }
 
+    [Column("DepartmentName")]
     [StringLength(100)]
     public string Name { get; set; } = null!;
 
+    [Column("DepartmentCode")]
     [StringLength(50)]
     public string? Code { get; set; }
 

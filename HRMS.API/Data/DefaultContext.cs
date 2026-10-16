@@ -175,6 +175,8 @@ public partial class DefaultContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.Name).HasColumnName("DepartmentName");
+            entity.Property(e => e.Code).HasColumnName("DepartmentCode");
         });
 
         modelBuilder.Entity<Designation>(entity =>
@@ -184,6 +186,8 @@ public partial class DefaultContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.Name).HasColumnName("DesignationName");
+            entity.Property(e => e.Code).HasColumnName("DesignationCode");
         });
 
         modelBuilder.Entity<Employee>(entity =>
@@ -208,6 +212,7 @@ public partial class DefaultContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.Name).HasColumnName("TypeName");
         });
 
         modelBuilder.Entity<Holiday>(entity =>
