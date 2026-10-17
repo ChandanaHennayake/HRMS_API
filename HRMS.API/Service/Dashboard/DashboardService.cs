@@ -93,6 +93,12 @@ namespace HRMS.API.Service.Dashboard
                             employeeIds.Contains(l.EmployeeId))
                 .CountAsync();
 
+            // Total pending attendance corrections awaiting review
+            var pendingCorrections = await _context.AttendanceCorrections
+                .Where(c => c.Status == 0 &&
+                            employeeIds.Contains(c.EmployeeId))
+                .CountAsync();
+
             // Percentages
             var presentPct = Math.Round((double)presentToday / totalEmployees * 100, 1);
             var latePct = Math.Round((double)lateEmployees / totalEmployees * 100, 1);
@@ -106,6 +112,7 @@ namespace HRMS.API.Service.Dashboard
                 OnLeaveToday = onLeaveCount,
                 AbsentToday = absentToday,
                 PendingLeaves = pendingLeaves,
+                PendingCorrections = pendingCorrections,
                 LateEmployees = lateEmployees,
                 MissingCheckOut = missingCheckOut,
                 PresentPercentage = presentPct,
@@ -141,6 +148,7 @@ namespace HRMS.API.Service.Dashboard
                     OnLeaveToday = 0,
                     AbsentToday = 0,
                     PendingLeaves = 0,
+                    PendingCorrections = 0,
                     TodayLeave = new List<EmployeeOnLeaveDto>(),
                     WeeklyAttendance = GetEmptyWeeklyAttendance(today)
                 };
@@ -172,6 +180,11 @@ namespace HRMS.API.Service.Dashboard
             var pendingLeaves = await _context.LeaveRequests
                 .Where(l => l.Status == (short)LeaveRequestStatus.Pending &&
                             branchEmployees.Contains(l.EmployeeId))
+                .CountAsync();
+
+            var pendingCorrections = await _context.AttendanceCorrections
+                .Where(c => c.Status == 0 &&
+                            branchEmployees.Contains(c.EmployeeId))
                 .CountAsync();
 
             var todayLeaveList = activeLeaveRequests
@@ -237,6 +250,7 @@ namespace HRMS.API.Service.Dashboard
                 OnLeaveToday = onLeaveToday,
                 AbsentToday = absentToday,
                 PendingLeaves = pendingLeaves,
+                PendingCorrections = pendingCorrections,
                 TodayLeave = todayLeaveList,
                 WeeklyAttendance = weeklyList
             };

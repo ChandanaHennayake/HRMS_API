@@ -216,28 +216,123 @@ builder.Services.AddHostedService<DailyAttendanceWorker>();
 
 var app = builder.Build();
 
-// Ensure dynamic PostgreSQL tables exist
+// Ensure dynamic PostgreSQL tables and compatibility columns exist
 using (var scope = app.Services.CreateScope())
 {
     try
     {
         var db = scope.ServiceProvider.GetRequiredService<DefaultContext>();
-        db.Database.ExecuteSqlRaw(@"
-            CREATE TABLE IF NOT EXISTS ""SystemNotice"" (
-                ""Id"" BIGSERIAL PRIMARY KEY,
-                ""Title"" VARCHAR(200) NOT NULL,
-                ""Message"" TEXT,
-                ""ImageUrl"" TEXT,
-                ""IsActive"" BOOLEAN NOT NULL DEFAULT TRUE,
-                ""TargetRole"" VARCHAR(50) NOT NULL DEFAULT 'All',
-                ""CreatedAt"" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-                ""CreatedBy"" INTEGER
-            );
-        ");
+
+        // 1. EmployeeSalary columns compatibility (BankAccountNo & PaymentMode aliases)
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'EmployeeSalary') THEN
+                        ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""BankAccountNo"" character varying(50);
+                        UPDATE ""EmployeeSalary"" SET ""BankAccountNo"" = ""BankAccountNumber"" WHERE ""BankAccountNo"" IS NULL AND ""BankAccountNumber"" IS NOT NULL;
+
+                        ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""PaymentMode"" character varying(50) DEFAULT 'Bank Transfer';
+                        UPDATE ""EmployeeSalary"" SET ""PaymentMode"" = 'Bank Transfer' WHERE ""PaymentMode"" IS NULL;
+
+                        ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""BankAccountNumber"" character varying(50);
+                        UPDATE ""EmployeeSalary"" SET ""BankAccountNumber"" = ""BankAccountNo"" WHERE ""BankAccountNumber"" IS NULL AND ""BankAccountNo"" IS NOT NULL;
+
+                        ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""PaymentMethod"" smallint DEFAULT 1;
+                    END IF;
+                END $$;
+            ");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Startup] EmployeeSalary migration notice: {ex.Message}");
+        }
+
+        // 2. AttendanceCorrection table
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS ""AttendanceCorrection"" (
+                    ""Id"" BIGSERIAL PRIMARY KEY,
+                    ""AttendanceId"" INTEGER,
+                    ""EmployeeId"" BIGINT NOT NULL,
+                    ""AttendanceDate"" DATE NOT NULL,
+                    ""RequestedCheckInTime"" TIMESTAMP WITHOUT TIME ZONE,
+                    ""RequestedCheckOutTime"" TIMESTAMP WITHOUT TIME ZONE,
+                    ""Reason"" VARCHAR(500) NOT NULL,
+                    ""Status"" SMALLINT NOT NULL DEFAULT 0,
+                    ""ReviewedBy"" BIGINT,
+                    ""ReviewedAt"" TIMESTAMP WITHOUT TIME ZONE,
+                    ""ReviewerComment"" VARCHAR(500),
+                    ""CreatedAt"" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                    ""UpdatedAt"" TIMESTAMP WITHOUT TIME ZONE
+                );
+            ");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Startup] AttendanceCorrection table notice: {ex.Message}");
+        }
+
+        // 3. Department, Designation, EmploymentType column aliases
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Department') THEN
+                        ALTER TABLE ""Department"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
+                        UPDATE ""Department"" SET ""Name"" = ""DepartmentName"" WHERE ""Name"" IS NULL AND ""DepartmentName"" IS NOT NULL;
+                        ALTER TABLE ""Department"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(50);
+                        UPDATE ""Department"" SET ""Code"" = ""DepartmentCode"" WHERE ""Code"" IS NULL AND ""DepartmentCode"" IS NOT NULL;
+                    END IF;
+
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Designation') THEN
+                        ALTER TABLE ""Designation"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
+                        UPDATE ""Designation"" SET ""Name"" = ""DesignationName"" WHERE ""Name"" IS NULL AND ""DesignationName"" IS NOT NULL;
+                        ALTER TABLE ""Designation"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(50);
+                        UPDATE ""Designation"" SET ""Code"" = ""DesignationCode"" WHERE ""Code"" IS NULL AND ""DesignationCode"" IS NOT NULL;
+                    END IF;
+
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'EmploymentType') THEN
+                        ALTER TABLE ""EmploymentType"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
+                        UPDATE ""EmploymentType"" SET ""Name"" = ""TypeName"" WHERE ""Name"" IS NULL AND ""TypeName"" IS NOT NULL;
+                        ALTER TABLE ""EmploymentType"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(50);
+                        UPDATE ""EmploymentType"" SET ""Code"" = ""TypeCode"" WHERE ""Code"" IS NULL AND ""TypeCode"" IS NOT NULL;
+                    END IF;
+                END $$;
+            ");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Startup] Lookups migration notice: {ex.Message}");
+        }
+
+        // 4. SystemNotice table
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS ""SystemNotice"" (
+                    ""Id"" BIGSERIAL PRIMARY KEY,
+                    ""Title"" VARCHAR(200) NOT NULL,
+                    ""Message"" TEXT,
+                    ""ImageUrl"" TEXT,
+                    ""IsActive"" BOOLEAN NOT NULL DEFAULT TRUE,
+                    ""TargetRole"" VARCHAR(50) NOT NULL DEFAULT 'All',
+                    ""CreatedAt"" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                    ""CreatedBy"" INTEGER
+                );
+            ");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Startup] SystemNotice table initialization notice: {ex.Message}");
+        }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[Startup] SystemNotice table initialization notice: {ex.Message}");
+        Console.WriteLine($"[Startup] DB scope initialization notice: {ex.Message}");
     }
 }
 

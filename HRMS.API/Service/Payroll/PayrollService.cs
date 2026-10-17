@@ -102,11 +102,18 @@ namespace HRMS.API.Service.Payroll
                 throw new Exception("No active employees found matching the specified parameters.");
             }
 
+            int? targetBranchId = (request.BranchId.HasValue && request.BranchId.Value > 0) ? request.BranchId.Value : null;
+            if (targetBranchId.HasValue)
+            {
+                var branchExists = await _context.Branches.AnyAsync(b => b.branchid == targetBranchId.Value);
+                if (!branchExists) targetBranchId = null;
+            }
+
             // 3. Create Draft PayrollRun entity
             var run = new PayrollRun
             {
                 CompanyId = request.CompanyId,
-                BranchId = request.BranchId,
+                BranchId = targetBranchId,
                 PayrollPeriodId = period.Id,
                 Status = 0, // Draft
                 ProcessedBy = processedBy,
@@ -241,7 +248,8 @@ namespace HRMS.API.Service.Payroll
 
         public async Task<IEnumerable<PayrollRunDto>> GetRunsAsync(long companyId, int? branchId)
         {
-            var runs = await _payrollRepository.GetRunsAsync(companyId, branchId);
+            int? filterBranchId = (branchId.HasValue && branchId.Value > 0) ? branchId : null;
+            var runs = await _payrollRepository.GetRunsAsync(companyId, filterBranchId);
             return runs.Select(r => new PayrollRunDto
             {
                 Id = r.Id,
@@ -665,15 +673,22 @@ namespace HRMS.API.Service.Payroll
             }
 
             // 2. Ensure or retrieve a PayrollRun for this period and branch
+            int? empBranchId = emp.BranchId > 0 ? (int)emp.BranchId : null;
+            if (empBranchId.HasValue)
+            {
+                var branchExists = await _context.Branches.AnyAsync(b => b.branchid == empBranchId.Value);
+                if (!branchExists) empBranchId = null;
+            }
+
             var run = await _context.PayrollRuns
-                .FirstOrDefaultAsync(r => r.PayrollPeriodId == period.Id && (r.BranchId == (int)emp.BranchId || r.BranchId == null));
+                .FirstOrDefaultAsync(r => r.PayrollPeriodId == period.Id && (r.BranchId == empBranchId || r.BranchId == null));
 
             if (run == null)
             {
                 run = new PayrollRun
                 {
                     CompanyId = emp.CompanyId,
-                    BranchId = (int)emp.BranchId,
+                    BranchId = empBranchId,
                     PayrollPeriodId = period.Id,
                     Status = 0, // Draft
                     ProcessedCount = 0,

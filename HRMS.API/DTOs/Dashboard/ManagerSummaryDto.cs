@@ -28,6 +28,7 @@ namespace HRMS.API.DTOs.Dashboard
         public int OnLeaveToday { get; set; }
         public int AbsentToday { get; set; }
         public int PendingLeaves { get; set; }
+        public int PendingCorrections { get; set; }
         public List<EmployeeOnLeaveDto> TodayLeave { get; set; } = new();
         public List<WeeklyAttendanceDayDto> WeeklyAttendance { get; set; } = new();
     }

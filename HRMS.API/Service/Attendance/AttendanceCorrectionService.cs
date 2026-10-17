@@ -9,7 +9,9 @@ using HRMS.API.Repository.Attendance;
 using HRMS.API.Repository.UserDetails;
 using HRMS.API.Service.Audit;
 using HRMS.API.Service.Email;
+using HRMS.API.Data;
 using HRMS.API.Service.Notification;
+using Microsoft.EntityFrameworkCore;
 using AttendanceEntity = HRMS.API.Entities.Attendance;
 
 namespace HRMS.API.Service.Attendance
@@ -24,6 +26,7 @@ namespace HRMS.API.Service.Attendance
         private readonly INotificationService _notificationService;
         private readonly IAuditService _auditService;
         private readonly IEmailService _emailService;
+        private readonly DefaultContext _context;
 
         public AttendanceCorrectionService(
             IAttendanceCorrectionRepository correctionRepo,
@@ -33,7 +36,8 @@ namespace HRMS.API.Service.Attendance
             IUserRepository userRepo,
             INotificationService notificationService,
             IAuditService auditService,
-            IEmailService emailService)
+            IEmailService emailService,
+            DefaultContext context)
         {
             _correctionRepo = correctionRepo;
             _attendanceRepo = attendanceRepo;
@@ -43,6 +47,7 @@ namespace HRMS.API.Service.Attendance
             _notificationService = notificationService;
             _auditService = auditService;
             _emailService = emailService;
+            _context = context;
         }
 
         public async Task<AttendanceCorrectionDto> SubmitCorrectionAsync(
@@ -104,6 +109,31 @@ namespace HRMS.API.Service.Attendance
             };
 
             await _correctionRepo.AddAsync(correction);
+
+            // Notify branch managers and admins of this pending request
+            try
+            {
+                var managers = await _context.AppUsers
+                    .Where(u => (u.RoleId == 1 || (u.RoleId == 2 && u.BranchId == employee.BranchId)) && u.IsActive == true)
+                    .ToListAsync();
+
+                foreach (var mgr in managers)
+                {
+                    await _notificationService.SendNotificationAsync(new HRMS.API.DTOs.Notification.CreateNotificationDto
+                    {
+                        UserId = mgr.UserId,
+                        Title = "Attendance Correction Request",
+                        Message = $"{employee.FirstName} {employee.LastName} requested attendance correction for {request.AttendanceDate:dd MMM yyyy}.",
+                        Type = "AttendanceCorrection",
+                        ReferenceId = correction.Id,
+                        ReferenceType = "AttendanceCorrection"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AttendanceCorrection] Manager notification notice: {ex.Message}");
+            }
 
             return await MapToDtoAsync(correction);
         }

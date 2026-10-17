@@ -7,6 +7,7 @@ namespace HRMS.API.DTOs.Dashboard
         public int OnLeaveToday { get; set; }
         public int AbsentToday { get; set; }
         public int PendingLeaves { get; set; }
+        public int PendingCorrections { get; set; }
         public int LateEmployees { get; set; }
         public int MissingCheckOut { get; set; }
         public double PresentPercentage { get; set; }
