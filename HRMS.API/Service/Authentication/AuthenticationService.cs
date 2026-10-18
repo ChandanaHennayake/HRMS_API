@@ -131,6 +131,27 @@ namespace HRMS.API.Service.Authentication
             var durationInMinutes = int.Parse(
                 _configuration["Jwt:DurationInMinutes"] ?? "120");
 
+            if (!user.EmployeeId.HasValue || user.EmployeeId.Value <= 0)
+            {
+                var matchingEmp = await _context.Employees.FirstOrDefaultAsync(e => e.Email == user.Email && !e.IsDeleted);
+                if (matchingEmp != null)
+                {
+                    user.EmployeeId = (int)matchingEmp.Id;
+                    try { await _userRepository.UpdateAsync(user); } catch {}
+                }
+            }
+
+            var roleName = !string.IsNullOrWhiteSpace(user.Role?.rolename)
+                ? user.Role.rolename
+                : (user.RoleId switch
+                {
+                    1 => "Admin",
+                    2 => "Manager",
+                    3 => "HR",
+                    4 => "Employee",
+                    _ => "Employee"
+                });
+
             return new LoginResponse
             {
                 UserId = user.UserId,
@@ -139,7 +160,7 @@ namespace HRMS.API.Service.Authentication
                 EmployeeId = user.EmployeeId.HasValue ? (int)user.EmployeeId.Value : 0,
                 FullName = $"{user.FirstName} {user.LastName}".Trim(),
                 RoleId = user.RoleId,
-                Role = user.Role?.rolename ?? string.Empty,
+                Role = roleName,
                 CompanyId = user.CompanyId,
                 BranchId = user.BranchId,
                 Token = token,
@@ -193,6 +214,27 @@ namespace HRMS.API.Service.Authentication
             var durationInMinutes = int.Parse(
                 _configuration["Jwt:DurationInMinutes"] ?? "120");
 
+            if (!user.EmployeeId.HasValue || user.EmployeeId.Value <= 0)
+            {
+                var matchingEmp = await _context.Employees.FirstOrDefaultAsync(e => e.Email == user.Email && !e.IsDeleted);
+                if (matchingEmp != null)
+                {
+                    user.EmployeeId = (int)matchingEmp.Id;
+                    try { await _userRepository.UpdateAsync(user); } catch {}
+                }
+            }
+
+            var roleName = !string.IsNullOrWhiteSpace(user.Role?.rolename)
+                ? user.Role.rolename
+                : (user.RoleId switch
+                {
+                    1 => "Admin",
+                    2 => "Manager",
+                    3 => "HR",
+                    4 => "Employee",
+                    _ => "Employee"
+                });
+
             return new LoginResponse
             {
                 UserId = user.UserId,
@@ -201,7 +243,7 @@ namespace HRMS.API.Service.Authentication
                 EmployeeId = user.EmployeeId.HasValue ? (int)user.EmployeeId.Value : 0,
                 FullName = $"{user.FirstName} {user.LastName}".Trim(),
                 RoleId = user.RoleId,
-                Role = user.Role?.rolename ?? string.Empty,
+                Role = roleName,
                 CompanyId = user.CompanyId,
                 BranchId = user.BranchId,
                 Token = newJwt,

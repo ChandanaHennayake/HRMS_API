@@ -79,23 +79,17 @@ namespace HRMS.API.Service.Salary
             }
             result.OtherDeductions = otherDeductions;
 
-            // 4. Statutory Deductions (Sri Lanka)
-            decimal grossEpfSalary = Math.Max(0, req.BaseSalary + epfAllowances - noPayDeduction);
-            result.GrossEpfSalary = grossEpfSalary;
-
-            decimal employeeEpf = 0;
-            decimal employerEpf = 0;
-            decimal employerEtf = 0;
-            decimal apitTax = 0;
+            // 4. Statutory Deductions (EPF/ETF removed as requested)
+            result.GrossEpfSalary = 0m;
+            decimal employeeEpf = 0m;
+            decimal employerEpf = 0m;
+            decimal employerEtf = 0m;
+            decimal apitTax = 0m;
 
             if (req.IncludeStatutoryDeductions)
             {
-                employeeEpf = Math.Round(grossEpfSalary * 0.08m, 2); // 8% Employee EPF
-                employerEpf = Math.Round(grossEpfSalary * 0.12m, 2); // 12% Employer EPF
-                employerEtf = Math.Round(grossEpfSalary * 0.03m, 2); // 3% Employer ETF
-
                 // Sri Lanka APIT progressive monthly brackets (tax free up to 100,000 LKR)
-                decimal taxableIncome = Math.Max(0, result.GrossEarnings - noPayDeduction - employeeEpf);
+                decimal taxableIncome = Math.Max(0, result.GrossEarnings - noPayDeduction);
                 if (taxableIncome > 100000m)
                 {
                     decimal excess = taxableIncome - 100000m;
@@ -120,9 +114,9 @@ namespace HRMS.API.Service.Salary
             result.ApitTax = apitTax;
 
             // Total Deductions & Net Salary
-            result.TotalDeductions = noPayDeduction + otherDeductions + employeeEpf + apitTax;
+            result.TotalDeductions = noPayDeduction + otherDeductions + apitTax;
             result.NetSalary = result.GrossEarnings - result.TotalDeductions;
-            result.TotalEmployerCost = (result.GrossEarnings - noPayDeduction) + employerEpf + employerEtf;
+            result.TotalEmployerCost = result.GrossEarnings - noPayDeduction;
 
             return result;
         }

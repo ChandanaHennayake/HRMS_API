@@ -77,7 +77,17 @@ namespace HRMS.API.Service.User
                 Username = x.Username,
                 Email = x.Email,
                 FullName = $"{x.FirstName} {x.LastName}".Trim(),
-                Role = x.Role?.rolename ?? string.Empty,
+                Role = !string.IsNullOrWhiteSpace(x.Role?.rolename)
+                    ? x.Role.rolename
+                    : (x.RoleId switch
+                    {
+                        1 => "Admin",
+                        2 => "Manager",
+                        3 => "HR",
+                        4 => "Employee",
+                        _ => "Employee"
+                    }),
+                RoleId = x.RoleId,
                 IsActive = x.IsActive ?? false
             }).ToList();
         }
@@ -95,7 +105,17 @@ namespace HRMS.API.Service.User
                 Username = user.Username,
                 Email = user.Email,
                 FullName = $"{user.FirstName} {user.LastName}".Trim(),
-                Role = user.Role?.rolename ?? string.Empty,
+                Role = !string.IsNullOrWhiteSpace(user.Role?.rolename)
+                    ? user.Role.rolename
+                    : (user.RoleId switch
+                    {
+                        1 => "Admin",
+                        2 => "Manager",
+                        3 => "HR",
+                        4 => "Employee",
+                        _ => "Employee"
+                    }),
+                RoleId = user.RoleId,
                 IsActive = user.IsActive ?? false
             };
         }

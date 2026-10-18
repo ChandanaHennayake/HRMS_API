@@ -25,6 +25,8 @@ namespace HRMS.API.Repository.UserDetails
         public async Task<AppUser?> GetByIdAsync(int id)
         {
             return await _context.AppUsers
+                .Include(x => x.Role)
+                .Include(x => x.Branch)
                 .FirstOrDefaultAsync(x => x.UserId == id);
         }
 
@@ -45,47 +47,92 @@ namespace HRMS.API.Repository.UserDetails
                     .Include(x => x.Department)
                     .Include(x => x.Designation)
                     .Include(x => x.EmploymentType)
-                    .FirstOrDefaultAsync(x => x.Id == user.EmployeeId.Value);
+                    .FirstOrDefaultAsync(x => x.Id == user.EmployeeId.Value && !x.IsDeleted);
             }
+
+            // Auto-link employee by email or employee code if not explicitly linked on user
+            if (employee == null && !string.IsNullOrWhiteSpace(user.Email))
+            {
+                employee = await _context.Employees
+                    .Include(x => x.Department)
+                    .Include(x => x.Designation)
+                    .Include(x => x.EmploymentType)
+                    .FirstOrDefaultAsync(x => x.Email == user.Email && !x.IsDeleted);
+
+                if (employee != null)
+                {
+                    user.EmployeeId = (int)employee.Id;
+                    try
+                    {
+                        await UpdateAsync(user);
+                    }
+                    catch
+                    {
+                        // Best effort auto-linking
+                    }
+                }
+            }
+
+            // Fallback branch resolution from employee if user branch is null
+            var branch = user.Branch;
+            if (branch == null && employee != null && employee.BranchId > 0)
+            {
+                branch = await _context.Branches.FirstOrDefaultAsync(b => b.branchid == employee.BranchId);
+            }
+
+            // Fallback role resolution
+            var roleName = !string.IsNullOrWhiteSpace(user.Role?.rolename)
+                ? user.Role.rolename
+                : (user.RoleId switch
+                {
+                    1 => "Admin",
+                    2 => "Manager",
+                    3 => "HR",
+                    4 => "Employee",
+                    _ => "Employee"
+                });
 
             return new UserProfileResponse
             {
                 UserId = user.UserId,
-                EmployeeId = user.EmployeeId,
+                EmployeeId = user.EmployeeId ?? (employee != null ? (int)employee.Id : null),
                 Username = user.Username,
                 FullName = $"{user.FirstName} {user.LastName}".Trim(),
                 Email = user.Email,
                 Phone = user.Phone ?? employee?.Phone,
-                Role = user.Role?.rolename ?? string.Empty,
+                Role = roleName,
                 RoleId = user.RoleId,
                 EmployeeCode = employee?.EmployeeCode,
                 DepartmentName = employee?.Department?.Name,
                 DesignationName = employee?.Designation?.Name,
                 EmploymentTypeName = employee?.EmploymentType?.Name,
                 JoinedDate = employee?.JoinedDate,
-                BranchId = user.BranchId,
-                BranchName = user.Branch?.branchname,
-                BranchLatitude = user.Branch?.Latitude,
-                BranchLongitude = user.Branch?.Longitude,
-                GeofenceRadiusMeters = user.Branch?.GeofenceRadiusMeters
+                BranchId = user.BranchId ?? (int?)employee?.BranchId,
+                BranchName = branch?.branchname,
+                BranchLatitude = branch?.Latitude,
+                BranchLongitude = branch?.Longitude,
+                GeofenceRadiusMeters = branch?.GeofenceRadiusMeters
             };
         }
 
         public async Task<AppUser?> GetByUsernameAsync(string username)
         {
             return await _context.AppUsers
+                .Include(x => x.Role)
                 .FirstOrDefaultAsync(x => x.Username == username);
         }
 
         public async Task<AppUser?> GetByEmailAsync(string email)
         {
             return await _context.AppUsers
+                .Include(x => x.Role)
                 .FirstOrDefaultAsync(x => x.Email == email);
         }
 
         public async Task<List<AppUser>> GetAllAsync()
         {
             return await _context.AppUsers
+                .Include(x => x.Role)
                 .OrderBy(x => x.FirstName)
                 .ToListAsync();
         }

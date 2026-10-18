@@ -1,3 +1,4 @@
+using HRMS.API.Data;
 using HRMS.API.DTOs.Leave;
 using HRMS.API.Enums;
 using HRMS.API.Interfaces.Repositories;
@@ -5,6 +6,7 @@ using HRMS.API.Repository.Leave;
 using HRMS.API.Service.Audit;
 using HRMS.API.Service.Email;
 using HRMS.API.Service.Notification;
+using Microsoft.EntityFrameworkCore;
 using LeaveRequestEntity = HRMS.API.Entities.LeaveRequest;
 
 namespace HRMS.API.Service.Leave
@@ -18,6 +20,7 @@ namespace HRMS.API.Service.Leave
         private readonly INotificationService _notificationService;
         private readonly IAuditService _auditService;
         private readonly IEmailService _emailService;
+        private readonly DefaultContext _context;
 
         public LeaveService(
             ILeaveRepository leaveRepository,
@@ -26,7 +29,8 @@ namespace HRMS.API.Service.Leave
             ILeaveTypeRepository leaveTypeRepository,
             INotificationService notificationService,
             IAuditService auditService,
-            IEmailService emailService)
+            IEmailService emailService,
+            DefaultContext context)
         {
             _leaveRepository = leaveRepository;
             _employeeRepository = employeeRepository;
@@ -35,6 +39,7 @@ namespace HRMS.API.Service.Leave
             _notificationService = notificationService;
             _auditService = auditService;
             _emailService = emailService;
+            _context = context;
         }
 
         // =====================================================
@@ -130,6 +135,15 @@ namespace HRMS.API.Service.Leave
                 throw new Exception(
                     "Selected leave period contains no working days.");
             }
+
+            // -------------------------------------------------
+            // MONTHLY LEAVE LIMIT VALIDATION (MAX 4 DAYS / MONTH)
+            // -------------------------------------------------
+
+            await ValidateMonthlyLeaveLimitAsync(
+                employeeId,
+                request.FromDate,
+                request.ToDate);
 
             // -------------------------------------------------
             // LEAVE BALANCE VALIDATION & PENDING ALLOCATION
@@ -705,6 +719,76 @@ namespace HRMS.API.Service.Leave
 
                 _ => "Unknown"
             };
+        }
+
+        // =====================================================
+        // MONTHLY LEAVE LIMIT (MAX 4 DAYS PER MONTH)
+        // =====================================================
+
+        private async Task ValidateMonthlyLeaveLimitAsync(
+            long employeeId,
+            DateOnly fromDate,
+            DateOnly toDate)
+        {
+            var cursor = new DateOnly(fromDate.Year, fromDate.Month, 1);
+            var endCursor = new DateOnly(toDate.Year, toDate.Month, 1);
+
+            while (cursor <= endCursor)
+            {
+                int year = cursor.Year;
+                int month = cursor.Month;
+                var monthStart = new DateOnly(year, month, 1);
+                var monthEnd = new DateOnly(year, month, DateTime.DaysInMonth(year, month));
+
+                // 1. Calculate requested working days falling in this month (excluding Sundays)
+                decimal requestedDaysInMonth = 0;
+                var rDate = fromDate > monthStart ? fromDate : monthStart;
+                var rEnd = toDate < monthEnd ? toDate : monthEnd;
+                while (rDate <= rEnd)
+                {
+                    if (rDate.DayOfWeek != DayOfWeek.Sunday)
+                    {
+                        requestedDaysInMonth++;
+                    }
+                    rDate = rDate.AddDays(1);
+                }
+
+                // 2. Query existing active leaves for this month (Pending = 0, Approved = 1)
+                var existingLeaves = await _context.LeaveRequests
+                    .AsNoTracking()
+                    .Where(x => x.EmployeeId == employeeId &&
+                                (x.Status == 0 || x.Status == 1) &&
+                                x.FromDate <= monthEnd &&
+                                x.ToDate >= monthStart)
+                    .ToListAsync();
+
+                decimal existingDaysInMonth = 0;
+                foreach (var l in existingLeaves)
+                {
+                    var lStart = l.FromDate > monthStart ? l.FromDate : monthStart;
+                    var lEnd = l.ToDate < monthEnd ? l.ToDate : monthEnd;
+                    var lDate = lStart;
+                    while (lDate <= lEnd)
+                    {
+                        if (lDate.DayOfWeek != DayOfWeek.Sunday)
+                        {
+                            existingDaysInMonth++;
+                        }
+                        lDate = lDate.AddDays(1);
+                    }
+                }
+
+                if (existingDaysInMonth + requestedDaysInMonth > 4)
+                {
+                    var monthName = cursor.ToString("MMMM yyyy");
+                    throw new Exception(
+                        $"Monthly leave limit exceeded: Employees can take a maximum of 4 leaves per month. " +
+                        $"For {monthName}, you have {existingDaysInMonth} active leave day(s) and requested {requestedDaysInMonth} day(s). " +
+                        $"Total would be {existingDaysInMonth + requestedDaysInMonth} days (Maximum allowed is 4 days per month).");
+                }
+
+                cursor = cursor.AddMonths(1);
+            }
         }
     }
 }

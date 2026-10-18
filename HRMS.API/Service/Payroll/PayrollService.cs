@@ -709,22 +709,14 @@ namespace HRMS.API.Service.Payroll
                 ? request.NoPayDeduction
                 : (request.NoPayDays * request.PerDayRate);
 
-            decimal epfApplicableAllowances = request.Allowances?.Where(a => a.IsEpfApplicable).Sum(a => a.Amount) ?? 0m;
-            decimal grossEpfSalary = Math.Max(0m, request.BaseSalary + epfApplicableAllowances - noPayDeduction);
-
-            decimal employeeEpf = request.DeductEpf
-                ? Math.Round(grossEpfSalary * (request.EmployeeEpfRate / 100m), 2)
-                : 0m;
-            decimal employerEpf = request.DeductEpf
-                ? Math.Round(grossEpfSalary * (request.EmployerEpfRate / 100m), 2)
-                : 0m;
-            decimal employerEtf = request.DeductEpf
-                ? Math.Round(grossEpfSalary * (request.EmployerEtfRate / 100m), 2)
-                : 0m;
-
             decimal otherDeductions = request.Deductions?.Sum(d => d.Amount) ?? 0m;
-            decimal totalDeductions = noPayDeduction + employeeEpf + otherDeductions;
+            decimal totalDeductions = noPayDeduction + otherDeductions;
             decimal netSalary = Math.Max(0m, grossEarnings - totalDeductions);
+
+            decimal employeeEpf = 0m;
+            decimal employerEpf = 0m;
+            decimal employerEtf = 0m;
+            decimal grossEpfSalary = 0m;
 
             // 4. Find existing Payslip or create new
             var payslip = await _context.Payslips
@@ -852,7 +844,7 @@ namespace HRMS.API.Service.Payroll
 
             run.TotalGross = allSlips.Sum(s => s.GrossEarnings);
             run.TotalNet = allSlips.Sum(s => s.NetSalary);
-            run.TotalEmployerCost = allSlips.Sum(s => s.GrossEarnings + s.EmployerEpf + s.EmployerEtf);
+            run.TotalEmployerCost = allSlips.Sum(s => s.GrossEarnings);
             run.ProcessedCount = allSlips.Count;
 
             await _context.SaveChangesAsync();

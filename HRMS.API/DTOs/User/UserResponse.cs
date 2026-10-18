@@ -1,4 +1,4 @@
-﻿namespace HRMS.API.DTOs.User
+namespace HRMS.API.DTOs.User
 {
     public class UserResponse
     {
@@ -11,6 +11,8 @@
         public string FullName { get; set; } = string.Empty;
 
         public string Role { get; set; } = string.Empty;
+
+        public int RoleId { get; set; }
 
         public bool IsActive { get; set; }
     }
