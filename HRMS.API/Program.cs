@@ -231,15 +231,19 @@ using (var scope = app.Services.CreateScope())
                 BEGIN
                     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'EmployeeSalary') THEN
                         ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""BankAccountNo"" character varying(50);
-                        UPDATE ""EmployeeSalary"" SET ""BankAccountNo"" = ""BankAccountNumber"" WHERE ""BankAccountNo"" IS NULL AND ""BankAccountNumber"" IS NOT NULL;
-
-                        ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""PaymentMode"" character varying(50) DEFAULT 'Bank Transfer';
-                        UPDATE ""EmployeeSalary"" SET ""PaymentMode"" = 'Bank Transfer' WHERE ""PaymentMode"" IS NULL;
-
                         ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""BankAccountNumber"" character varying(50);
-                        UPDATE ""EmployeeSalary"" SET ""BankAccountNumber"" = ""BankAccountNo"" WHERE ""BankAccountNumber"" IS NULL AND ""BankAccountNo"" IS NOT NULL;
-
+                        ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""PaymentMode"" character varying(50) DEFAULT 'Bank Transfer';
                         ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""PaymentMethod"" smallint DEFAULT 1;
+
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'EmployeeSalary' AND column_name = 'BankAccountNumber') THEN
+                            EXECUTE 'UPDATE ""EmployeeSalary"" SET ""BankAccountNo"" = ""BankAccountNumber"" WHERE ""BankAccountNo"" IS NULL AND ""BankAccountNumber"" IS NOT NULL';
+                        END IF;
+
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'EmployeeSalary' AND column_name = 'BankAccountNo') THEN
+                            EXECUTE 'UPDATE ""EmployeeSalary"" SET ""BankAccountNumber"" = ""BankAccountNo"" WHERE ""BankAccountNumber"" IS NULL AND ""BankAccountNo"" IS NOT NULL';
+                        END IF;
+
+                        UPDATE ""EmployeeSalary"" SET ""PaymentMode"" = 'Bank Transfer' WHERE ""PaymentMode"" IS NULL;
                     END IF;
 
                     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Employee') THEN
@@ -253,8 +257,10 @@ using (var scope = app.Services.CreateScope())
                         ALTER TABLE ""AppUser"" ADD COLUMN IF NOT EXISTS ""ClearPassword"" text;
                         ALTER TABLE ""AppUser"" ADD COLUMN IF NOT EXISTS ""IsDeleted"" boolean DEFAULT false;
                         UPDATE ""AppUser"" SET ""ClearPassword"" = 'Admin@123' WHERE ""ClearPassword"" IS NULL AND ""UserId"" = 1;
-                        UPDATE ""AppUser"" SET ""ClearPassword"" = ""PasswordSalt"" WHERE ""ClearPassword"" IS NULL AND ""PasswordSalt"" IS NOT NULL AND ""PasswordSalt"" != 'SYSTEM_BCRYPT_SALT';
-                        UPDATE ""AppUser"" SET ""PasswordSalt"" = ""ClearPassword"" WHERE ""PasswordSalt"" IS NULL AND ""ClearPassword"" IS NOT NULL;
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'AppUser' AND column_name = 'PasswordSalt') THEN
+                            EXECUTE 'UPDATE ""AppUser"" SET ""ClearPassword"" = ""PasswordSalt"" WHERE ""ClearPassword"" IS NULL AND ""PasswordSalt"" IS NOT NULL AND ""PasswordSalt"" != ''SYSTEM_BCRYPT_SALT''';
+                            EXECUTE 'UPDATE ""AppUser"" SET ""PasswordSalt"" = ""ClearPassword"" WHERE ""PasswordSalt"" IS NULL AND ""ClearPassword"" IS NOT NULL';
+                        END IF;
                     END IF;
                 END $$;
             ");
@@ -298,23 +304,35 @@ using (var scope = app.Services.CreateScope())
                 BEGIN
                     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Department') THEN
                         ALTER TABLE ""Department"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
-                        UPDATE ""Department"" SET ""Name"" = ""DepartmentName"" WHERE ""Name"" IS NULL AND ""DepartmentName"" IS NOT NULL;
                         ALTER TABLE ""Department"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(50);
-                        UPDATE ""Department"" SET ""Code"" = ""DepartmentCode"" WHERE ""Code"" IS NULL AND ""DepartmentCode"" IS NOT NULL;
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Department' AND column_name = 'DepartmentName') THEN
+                            EXECUTE 'UPDATE ""Department"" SET ""Name"" = ""DepartmentName"" WHERE ""Name"" IS NULL AND ""DepartmentName"" IS NOT NULL';
+                        END IF;
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Department' AND column_name = 'DepartmentCode') THEN
+                            EXECUTE 'UPDATE ""Department"" SET ""Code"" = ""DepartmentCode"" WHERE ""Code"" IS NULL AND ""DepartmentCode"" IS NOT NULL';
+                        END IF;
                     END IF;
 
                     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Designation') THEN
                         ALTER TABLE ""Designation"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
-                        UPDATE ""Designation"" SET ""Name"" = ""DesignationName"" WHERE ""Name"" IS NULL AND ""DesignationName"" IS NOT NULL;
                         ALTER TABLE ""Designation"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(50);
-                        UPDATE ""Designation"" SET ""Code"" = ""DesignationCode"" WHERE ""Code"" IS NULL AND ""DesignationCode"" IS NOT NULL;
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Designation' AND column_name = 'DesignationName') THEN
+                            EXECUTE 'UPDATE ""Designation"" SET ""Name"" = ""DesignationName"" WHERE ""Name"" IS NULL AND ""DesignationName"" IS NOT NULL';
+                        END IF;
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Designation' AND column_name = 'DesignationCode') THEN
+                            EXECUTE 'UPDATE ""Designation"" SET ""Code"" = ""DesignationCode"" WHERE ""Code"" IS NULL AND ""DesignationCode"" IS NOT NULL';
+                        END IF;
                     END IF;
 
                     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'EmploymentType') THEN
                         ALTER TABLE ""EmploymentType"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
-                        UPDATE ""EmploymentType"" SET ""Name"" = ""TypeName"" WHERE ""Name"" IS NULL AND ""TypeName"" IS NOT NULL;
                         ALTER TABLE ""EmploymentType"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(50);
-                        UPDATE ""EmploymentType"" SET ""Code"" = ""TypeCode"" WHERE ""Code"" IS NULL AND ""TypeCode"" IS NOT NULL;
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'EmploymentType' AND column_name = 'TypeName') THEN
+                            EXECUTE 'UPDATE ""EmploymentType"" SET ""Name"" = ""TypeName"" WHERE ""Name"" IS NULL AND ""TypeName"" IS NOT NULL';
+                        END IF;
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'EmploymentType' AND column_name = 'TypeCode') THEN
+                            EXECUTE 'UPDATE ""EmploymentType"" SET ""Code"" = ""TypeCode"" WHERE ""Code"" IS NULL AND ""TypeCode"" IS NOT NULL';
+                        END IF;
                     END IF;
                 END $$;
             ");
