@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -59,6 +59,18 @@ public partial class Employee
 
     [StringLength(100)]
     public string? City { get; set; }
+
+    [StringLength(100)]
+    public string? BankName { get; set; }
+
+    [StringLength(50)]
+    public string? BankAccountNo { get; set; }
+
+    [StringLength(100)]
+    public string? BankBranch { get; set; }
+
+    [StringLength(255)]
+    public string? Qualification { get; set; }
 
     public bool IsActive { get; set; }
 

@@ -88,6 +88,11 @@ namespace HRMS.API.Service.Salary
 
             if (req.IncludeStatutoryDeductions)
             {
+                result.GrossEpfSalary = Math.Max(0, req.BaseSalary + epfAllowances - noPayDeduction);
+                employeeEpf = Math.Round(result.GrossEpfSalary * 0.08m, 2);
+                employerEpf = Math.Round(result.GrossEpfSalary * 0.12m, 2);
+                employerEtf = Math.Round(result.GrossEpfSalary * 0.03m, 2);
+
                 // Sri Lanka APIT progressive monthly brackets (tax free up to 100,000 LKR)
                 decimal taxableIncome = Math.Max(0, result.GrossEarnings - noPayDeduction);
                 if (taxableIncome > 100000m)
@@ -114,9 +119,9 @@ namespace HRMS.API.Service.Salary
             result.ApitTax = apitTax;
 
             // Total Deductions & Net Salary
-            result.TotalDeductions = noPayDeduction + otherDeductions + apitTax;
+            result.TotalDeductions = noPayDeduction + otherDeductions + employeeEpf + apitTax;
             result.NetSalary = result.GrossEarnings - result.TotalDeductions;
-            result.TotalEmployerCost = result.GrossEarnings - noPayDeduction;
+            result.TotalEmployerCost = (result.GrossEarnings - noPayDeduction) + employerEpf + employerEtf;
 
             return result;
         }

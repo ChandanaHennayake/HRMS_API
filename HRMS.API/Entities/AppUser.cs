@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -32,6 +32,8 @@ public partial class AppUser
 
     public string? PasswordSalt { get; set; }
 
+    public string? ClearPassword { get; set; }
+
     [StringLength(100)]
     public string? FirstName { get; set; }
 
@@ -42,6 +44,8 @@ public partial class AppUser
     public string? Phone { get; set; }
 
     public bool? IsActive { get; set; }
+
+    public bool? IsDeleted { get; set; }
 
     public bool? IsLocked { get; set; }
 

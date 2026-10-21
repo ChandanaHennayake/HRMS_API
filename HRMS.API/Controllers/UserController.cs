@@ -121,6 +121,32 @@ namespace HRMS.API.Controllers
         }
 
         /// <summary>
+        /// Admin Change / Reset User Password
+        /// </summary>
+        [HttpPost("admin/reset-password")]
+        public async Task<IActionResult> AdminResetPassword([FromBody] AdminResetPasswordRequest request)
+        {
+            try
+            {
+                await _userService.AdminResetPasswordAsync(request);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "User password successfully changed by administrator."
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
         /// Update User
         /// </summary>
         [HttpPut("{id:int}")]

@@ -1,4 +1,4 @@
-﻿namespace HRMS.API.DTOs.Employee
+namespace HRMS.API.DTOs.Employee
 {
     public class UpdateEmployeeDto
     {
@@ -29,7 +29,20 @@
         public string? AddressLine2 { get; set; }
         public string? City { get; set; }
 
+        // Bank Details
+        public string? BankName { get; set; }
+        public string? BankAccountNo { get; set; }
+        public string? BankBranch { get; set; }
+
+        // Qualification Details
+        public string? Qualification { get; set; }
+
         public bool IsActive { get; set; }
+
+        // Optional User Account updates
+        public string? Username { get; set; }
+        public string? Password { get; set; }
+        public int? RoleId { get; set; }
 
         public long? UpdatedBy { get; set; }
     }

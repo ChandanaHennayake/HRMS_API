@@ -241,12 +241,27 @@ using (var scope = app.Services.CreateScope())
 
                         ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""PaymentMethod"" smallint DEFAULT 1;
                     END IF;
+
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Employee') THEN
+                        ALTER TABLE ""Employee"" ADD COLUMN IF NOT EXISTS ""BankName"" character varying(100);
+                        ALTER TABLE ""Employee"" ADD COLUMN IF NOT EXISTS ""BankAccountNo"" character varying(50);
+                        ALTER TABLE ""Employee"" ADD COLUMN IF NOT EXISTS ""BankBranch"" character varying(100);
+                        ALTER TABLE ""Employee"" ADD COLUMN IF NOT EXISTS ""Qualification"" character varying(255);
+                    END IF;
+
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'AppUser') THEN
+                        ALTER TABLE ""AppUser"" ADD COLUMN IF NOT EXISTS ""ClearPassword"" text;
+                        ALTER TABLE ""AppUser"" ADD COLUMN IF NOT EXISTS ""IsDeleted"" boolean DEFAULT false;
+                        UPDATE ""AppUser"" SET ""ClearPassword"" = 'Admin@123' WHERE ""ClearPassword"" IS NULL AND ""UserId"" = 1;
+                        UPDATE ""AppUser"" SET ""ClearPassword"" = ""PasswordSalt"" WHERE ""ClearPassword"" IS NULL AND ""PasswordSalt"" IS NOT NULL AND ""PasswordSalt"" != 'SYSTEM_BCRYPT_SALT';
+                        UPDATE ""AppUser"" SET ""PasswordSalt"" = ""ClearPassword"" WHERE ""PasswordSalt"" IS NULL AND ""ClearPassword"" IS NOT NULL;
+                    END IF;
                 END $$;
             ");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Startup] EmployeeSalary migration notice: {ex.Message}");
+            Console.WriteLine($"[Startup] Employee/EmployeeSalary migration notice: {ex.Message}");
         }
 
         // 2. AttendanceCorrection table
@@ -328,6 +343,17 @@ using (var scope = app.Services.CreateScope())
         catch (Exception ex)
         {
             Console.WriteLine($"[Startup] SystemNotice table initialization notice: {ex.Message}");
+        }
+
+        // 5. Payroll & Master Entity Schema Reconciliation
+        try
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            await DatabaseInitializer.EnsureSchemaUpToDateAsync(db, logger);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Startup] Payroll schema reconciliation notice: {ex.Message}");
         }
     }
     catch (Exception ex)

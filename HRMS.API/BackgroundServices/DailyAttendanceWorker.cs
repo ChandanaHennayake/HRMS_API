@@ -1,4 +1,4 @@
-﻿using HRMS.API.Service.Attendance;
+using HRMS.API.Service.Attendance;
 
 namespace HRMS.API.BackgroundServices
 {
@@ -25,10 +25,10 @@ namespace HRMS.API.BackgroundServices
             {
                 try
                 {
-                    // Current server time
-                    var now = DateTime.Now;
+                    // Current Sri Lanka business time
+                    var now = HRMS.API.Helpers.DateTimeHelper.Now;
 
-                    // Run every day at 11:55 PM
+                    // Run every day at 11:55 PM Sri Lanka time
                     var nextRun = now.Date
                         .AddHours(23)
                         .AddMinutes(55);

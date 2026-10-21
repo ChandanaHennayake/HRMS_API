@@ -1,4 +1,4 @@
-﻿namespace HRMS.API.DTOs.Employee
+namespace HRMS.API.DTOs.Employee
 {
     public class CreateEmployeeDto
     {
@@ -26,6 +26,14 @@
         public string? AddressLine1 { get; set; }
         public string? AddressLine2 { get; set; }
         public string? City { get; set; }
+
+        // Bank Details
+        public string? BankName { get; set; }
+        public string? BankAccountNo { get; set; }
+        public string? BankBranch { get; set; }
+
+        // Qualification Details
+        public string? Qualification { get; set; }
 
         public long? CreatedBy { get; set; }
 

@@ -14,6 +14,8 @@ namespace HRMS.API.Service.User
 
         Task ChangePasswordAsync(ChangePasswordRequest request);
 
+        Task AdminResetPasswordAsync(AdminResetPasswordRequest request);
+
         Task UpdateAsync(int id, UpdateUserRequest request);
 
         Task DeleteAsync(int id);

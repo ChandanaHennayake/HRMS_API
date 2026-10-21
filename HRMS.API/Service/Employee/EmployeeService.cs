@@ -1,9 +1,12 @@
+using HRMS.API.Data;
 using HRMS.API.DTOs.Employee;
 using HRMS.API.DTOs.User;
 using HRMS.API.Entities;
+using HRMS.API.Helpers;
 using HRMS.API.Interfaces.Repositories;
 using HRMS.API.Interfaces.Services;
 using HRMS.API.Service.User;
+using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.API.Services
 {
@@ -11,13 +14,16 @@ namespace HRMS.API.Services
     {
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IUserService _userService;
+        private readonly DefaultContext _context;
 
         public EmployeeService(
             IEmployeeRepository employeeRepository,
-            IUserService userService)
+            IUserService userService,
+            DefaultContext context)
         {
             _employeeRepository = employeeRepository;
             _userService = userService;
+            _context = context;
         }
 
         //public async Task<EmployeeDto> CreateAsync(
@@ -217,6 +223,11 @@ namespace HRMS.API.Services
                 AddressLine2 = request.AddressLine2?.Trim(),
                 City = request.City?.Trim(),
 
+                BankName = request.BankName?.Trim(),
+                BankAccountNo = request.BankAccountNo?.Trim(),
+                BankBranch = request.BankBranch?.Trim(),
+                Qualification = request.Qualification?.Trim(),
+
                 IsActive = true,
                 IsDeleted = false,
 
@@ -359,6 +370,18 @@ namespace HRMS.API.Services
             employee.City =
                 request.City?.Trim();
 
+            employee.BankName =
+                request.BankName?.Trim();
+
+            employee.BankAccountNo =
+                request.BankAccountNo?.Trim();
+
+            employee.BankBranch =
+                request.BankBranch?.Trim();
+
+            employee.Qualification =
+                request.Qualification?.Trim();
+
             employee.IsActive =
                 request.IsActive;
 
@@ -371,6 +394,36 @@ namespace HRMS.API.Services
             await _employeeRepository.UpdateAsync(
                 employee
             );
+
+            // Synchronize with linked user account (if any)
+            var linkedUser = await _context.AppUsers.FirstOrDefaultAsync(u => u.EmployeeId == (int)id || (!string.IsNullOrEmpty(employee.Email) && u.Email == employee.Email));
+            if (linkedUser != null)
+            {
+                if (!string.IsNullOrWhiteSpace(request.Password))
+                {
+                    linkedUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                    linkedUser.ClearPassword = request.Password;
+                    linkedUser.PasswordSalt = request.Password;
+                    linkedUser.PasswordChangedDate = DateTimeHelper.Now;
+                }
+                if (!string.IsNullOrWhiteSpace(request.Username))
+                {
+                    linkedUser.Username = request.Username.Trim();
+                }
+                if (request.RoleId.HasValue && request.RoleId.Value > 0)
+                {
+                    linkedUser.RoleId = request.RoleId.Value;
+                }
+                linkedUser.IsActive = request.IsActive;
+                linkedUser.ModifiedDate = DateTimeHelper.Now;
+                if (!request.IsActive)
+                {
+                    linkedUser.IsLocked = true;
+                    var tokens = await _context.RefreshTokens.Where(t => t.userid == linkedUser.UserId).ToListAsync();
+                    foreach (var t in tokens) t.isrevoked = true;
+                }
+                await _context.SaveChangesAsync();
+            }
 
             return await _employeeRepository.GetByIdAsync(
                 id

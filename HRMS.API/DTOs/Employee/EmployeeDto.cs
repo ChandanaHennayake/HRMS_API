@@ -1,4 +1,4 @@
-﻿namespace HRMS.API.DTOs.Employee
+namespace HRMS.API.DTOs.Employee
 {
     public class EmployeeDto
     {
@@ -38,7 +38,17 @@
         public string? AddressLine2 { get; set; }
         public string? City { get; set; }
 
+        public string? BankName { get; set; }
+        public string? BankAccountNo { get; set; }
+        public string? BankBranch { get; set; }
+        public string? Qualification { get; set; }
+
         public bool IsActive { get; set; }
+
+        // User Account Credentials (for Admin viewing and management)
+        public int? UserId { get; set; }
+        public string? Username { get; set; }
+        public string? Password { get; set; }
 
         // PostgreSQL TIMESTAMPTZ
         public DateTime CreatedAt { get; set; }

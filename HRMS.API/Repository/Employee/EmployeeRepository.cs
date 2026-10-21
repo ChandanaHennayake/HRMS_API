@@ -1,4 +1,4 @@
-﻿using HRMS.API.Data;
+using HRMS.API.Data;
 using HRMS.API.DTOs.Employee;
 using HRMS.API.Entities;
 using HRMS.API.Interfaces.Repositories;
@@ -127,6 +127,18 @@ namespace HRMS.API.Repositories
                     City =
                         e.City,
 
+                    BankName =
+                        e.BankName,
+
+                    BankAccountNo =
+                        e.BankAccountNo,
+
+                    BankBranch =
+                        e.BankBranch,
+
+                    Qualification =
+                        e.Qualification,
+
                     IsActive =
                         e.IsActive,
 
@@ -136,6 +148,23 @@ namespace HRMS.API.Repositories
             )
             .AsNoTracking()
             .ToListAsync();
+
+            var employeeIds = employees.Select(e => (int)e.Id).ToList();
+            var users = await _context.AppUsers
+                .Where(u => u.EmployeeId.HasValue && employeeIds.Contains(u.EmployeeId.Value))
+                .ToListAsync();
+
+            var userByEmpId = users.Where(u => u.EmployeeId.HasValue).ToDictionary(u => u.EmployeeId!.Value);
+
+            foreach (var emp in employees)
+            {
+                if (userByEmpId.TryGetValue((int)emp.Id, out var user))
+                {
+                    emp.UserId = user.UserId;
+                    emp.Username = user.Username;
+                    emp.Password = user.ClearPassword ?? user.PasswordSalt;
+                }
+            }
 
             return employees;
         }
@@ -247,6 +276,18 @@ namespace HRMS.API.Repositories
                     City =
                         e.City,
 
+                    BankName =
+                        e.BankName,
+
+                    BankAccountNo =
+                        e.BankAccountNo,
+
+                    BankBranch =
+                        e.BankBranch,
+
+                    Qualification =
+                        e.Qualification,
+
                     IsActive =
                         e.IsActive,
 
@@ -256,6 +297,17 @@ namespace HRMS.API.Repositories
             )
             .AsNoTracking()
             .FirstOrDefaultAsync();
+
+            if (employee != null)
+            {
+                var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.EmployeeId == (int)employee.Id || (!string.IsNullOrEmpty(employee.Email) && u.Email == employee.Email));
+                if (user != null)
+                {
+                    employee.UserId = user.UserId;
+                    employee.Username = user.Username;
+                    employee.Password = user.ClearPassword ?? user.PasswordSalt;
+                }
+            }
 
             return employee;
         }
@@ -304,6 +356,27 @@ namespace HRMS.API.Repositories
         {
             _context.Employees.Update(employee);
 
+            if (!employee.IsActive || employee.IsDeleted)
+            {
+                var users = await _context.AppUsers
+                    .Where(u => u.EmployeeId == (int)employee.Id || (!string.IsNullOrEmpty(employee.Email) && u.Email == employee.Email))
+                    .ToListAsync();
+
+                foreach (var u in users)
+                {
+                    u.IsActive = false;
+                    u.IsDeleted = employee.IsDeleted;
+                    u.IsLocked = true;
+                    u.ModifiedDate = DateTime.Now;
+
+                    var tokens = await _context.RefreshTokens.Where(t => t.userid == u.UserId).ToListAsync();
+                    foreach (var t in tokens)
+                    {
+                        t.isrevoked = true;
+                    }
+                }
+            }
+
             await _context.SaveChangesAsync();
         }
 
@@ -327,10 +400,29 @@ namespace HRMS.API.Repositories
         public async Task DeleteAsync(Employee employee)
         {
             employee.IsDeleted = true;
-
             employee.IsActive = false;
+            employee.UpdatedAt = DateTime.UtcNow;
 
             _context.Employees.Update(employee);
+
+            // Cascade soft-delete / deactivation to associated user accounts
+            var users = await _context.AppUsers
+                .Where(u => u.EmployeeId == (int)employee.Id || (!string.IsNullOrEmpty(employee.Email) && u.Email == employee.Email))
+                .ToListAsync();
+
+            foreach (var u in users)
+            {
+                u.IsActive = false;
+                u.IsLocked = true;
+                u.ModifiedDate = DateTime.Now;
+                u.ModifiedBy = employee.UpdatedBy.HasValue ? (int?)employee.UpdatedBy.Value : null;
+
+                var tokens = await _context.RefreshTokens.Where(t => t.userid == u.UserId).ToListAsync();
+                foreach (var t in tokens)
+                {
+                    t.isrevoked = true;
+                }
+            }
 
             await _context.SaveChangesAsync();
         }

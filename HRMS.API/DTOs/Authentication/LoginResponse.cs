@@ -18,6 +18,7 @@ namespace HRMS.API.DTOs.Authentication
         public int CompanyId { get; set; }
 
         public int? BranchId { get; set; }
+        public string? BranchName { get; set; }
 
         public string Token { get; set; } = string.Empty;
 

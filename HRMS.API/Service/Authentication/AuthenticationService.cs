@@ -41,10 +41,33 @@ namespace HRMS.API.Service.Authentication
                 throw new Exception("Invalid username or password.");
             }
 
-            if (user.IsActive != true)
+            if (user.IsActive != true || user.IsDeleted == true)
             {
-                await _auditService.LogSecurityEventAsync(user.UserId, request.Username, "LoginBlocked", $"Login blocked: User '{request.Username}' account is inactive.", null, false);
-                throw new Exception("User account is inactive.");
+                await _auditService.LogSecurityEventAsync(user.UserId, request.Username, "LoginBlocked", $"Login blocked: User '{request.Username}' account is inactive or deleted.", null, false);
+                throw new Exception("This account has been deleted or deactivated. Access is denied. Please contact the administrator.");
+            }
+
+            // Verify if linked employee record is deleted or inactive
+            Employee? matchingEmp = null;
+            if (user.EmployeeId.HasValue && user.EmployeeId.Value > 0)
+            {
+                matchingEmp = await _context.Employees.FirstOrDefaultAsync(e => e.Id == user.EmployeeId.Value);
+            }
+            if (matchingEmp == null && !string.IsNullOrWhiteSpace(user.Email))
+            {
+                matchingEmp = await _context.Employees.FirstOrDefaultAsync(e => e.Email == user.Email);
+            }
+
+            if (matchingEmp != null && (matchingEmp.IsDeleted || !matchingEmp.IsActive))
+            {
+                user.IsActive = false;
+                user.IsDeleted = true;
+                user.IsLocked = true;
+                try { await _userRepository.UpdateAsync(user); } catch { }
+
+                await _auditService.LogSecurityEventAsync(user.UserId, request.Username, "LoginBlocked",
+                    $"Login blocked: Employee '{matchingEmp.FirstName} {matchingEmp.LastName}' has been deleted or deactivated.", null, false);
+                throw new Exception("This account has been deleted or deactivated. Access is denied.");
             }
 
             if (user.IsLocked == true)
@@ -133,7 +156,7 @@ namespace HRMS.API.Service.Authentication
 
             if (!user.EmployeeId.HasValue || user.EmployeeId.Value <= 0)
             {
-                var matchingEmp = await _context.Employees.FirstOrDefaultAsync(e => e.Email == user.Email && !e.IsDeleted);
+                matchingEmp = await _context.Employees.FirstOrDefaultAsync(e => e.Email == user.Email && !e.IsDeleted);
                 if (matchingEmp != null)
                 {
                     user.EmployeeId = (int)matchingEmp.Id;
@@ -152,6 +175,18 @@ namespace HRMS.API.Service.Authentication
                     _ => "Employee"
                 });
 
+            var branchName = user.Branch?.branchname;
+            if (string.IsNullOrWhiteSpace(branchName) && matchingEmp != null && matchingEmp.BranchId > 0)
+            {
+                var empBranch = await _context.Branches.FirstOrDefaultAsync(b => b.branchid == matchingEmp.BranchId);
+                branchName = empBranch?.branchname;
+            }
+            if (string.IsNullOrWhiteSpace(branchName) && user.BranchId.HasValue && user.BranchId.Value > 0)
+            {
+                var userBranch = await _context.Branches.FirstOrDefaultAsync(b => b.branchid == user.BranchId.Value);
+                branchName = userBranch?.branchname;
+            }
+
             return new LoginResponse
             {
                 UserId = user.UserId,
@@ -162,7 +197,8 @@ namespace HRMS.API.Service.Authentication
                 RoleId = user.RoleId,
                 Role = roleName,
                 CompanyId = user.CompanyId,
-                BranchId = user.BranchId,
+                BranchId = user.BranchId ?? (matchingEmp != null ? (int)matchingEmp.BranchId : null),
+                BranchName = branchName,
                 Token = token,
                 RefreshToken = refreshTokenString,
                 Expiration = DateTime.Now.AddMinutes(durationInMinutes)
@@ -189,8 +225,27 @@ namespace HRMS.API.Service.Authentication
                 throw new Exception("Refresh token has expired.");
 
             var user = existingToken.user;
-            if (user == null || user.IsActive != true || user.IsLocked == true)
-                throw new Exception("User account is inactive or locked.");
+            if (user == null || user.IsActive != true || user.IsLocked == true || user.IsDeleted == true)
+                throw new Exception("User account is inactive, locked, or deleted.");
+
+            Employee? refreshEmp = null;
+            if (user.EmployeeId.HasValue && user.EmployeeId.Value > 0)
+            {
+                refreshEmp = await _context.Employees.FirstOrDefaultAsync(e => e.Id == user.EmployeeId.Value);
+            }
+            if (refreshEmp == null && !string.IsNullOrWhiteSpace(user.Email))
+            {
+                refreshEmp = await _context.Employees.FirstOrDefaultAsync(e => e.Email == user.Email);
+            }
+
+            if (refreshEmp != null && (refreshEmp.IsDeleted || !refreshEmp.IsActive))
+            {
+                existingToken.isrevoked = true;
+                user.IsActive = false;
+                user.IsLocked = true;
+                await _context.SaveChangesAsync();
+                throw new Exception("This employee account has been deleted or deactivated. Access is denied.");
+            }
 
             // Revoke the old refresh token (rotation)
             existingToken.isrevoked = true;
@@ -214,14 +269,19 @@ namespace HRMS.API.Service.Authentication
             var durationInMinutes = int.Parse(
                 _configuration["Jwt:DurationInMinutes"] ?? "120");
 
+            Employee? matchingEmp = null;
             if (!user.EmployeeId.HasValue || user.EmployeeId.Value <= 0)
             {
-                var matchingEmp = await _context.Employees.FirstOrDefaultAsync(e => e.Email == user.Email && !e.IsDeleted);
+                matchingEmp = await _context.Employees.FirstOrDefaultAsync(e => e.Email == user.Email && !e.IsDeleted);
                 if (matchingEmp != null)
                 {
                     user.EmployeeId = (int)matchingEmp.Id;
                     try { await _userRepository.UpdateAsync(user); } catch {}
                 }
+            }
+            else
+            {
+                matchingEmp = await _context.Employees.FirstOrDefaultAsync(e => e.Id == user.EmployeeId.Value && !e.IsDeleted);
             }
 
             var roleName = !string.IsNullOrWhiteSpace(user.Role?.rolename)
@@ -235,6 +295,18 @@ namespace HRMS.API.Service.Authentication
                     _ => "Employee"
                 });
 
+            var branchName = user.Branch?.branchname;
+            if (string.IsNullOrWhiteSpace(branchName) && matchingEmp != null && matchingEmp.BranchId > 0)
+            {
+                var empBranch = await _context.Branches.FirstOrDefaultAsync(b => b.branchid == matchingEmp.BranchId);
+                branchName = empBranch?.branchname;
+            }
+            if (string.IsNullOrWhiteSpace(branchName) && user.BranchId.HasValue && user.BranchId.Value > 0)
+            {
+                var userBranch = await _context.Branches.FirstOrDefaultAsync(b => b.branchid == user.BranchId.Value);
+                branchName = userBranch?.branchname;
+            }
+
             return new LoginResponse
             {
                 UserId = user.UserId,
@@ -245,7 +317,8 @@ namespace HRMS.API.Service.Authentication
                 RoleId = user.RoleId,
                 Role = roleName,
                 CompanyId = user.CompanyId,
-                BranchId = user.BranchId,
+                BranchId = user.BranchId ?? (matchingEmp != null ? (int)matchingEmp.BranchId : null),
+                BranchName = branchName,
                 Token = newJwt,
                 RefreshToken = newRefreshTokenString,
                 Expiration = DateTime.UtcNow.AddMinutes(durationInMinutes)

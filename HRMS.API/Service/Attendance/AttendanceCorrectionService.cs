@@ -105,7 +105,7 @@ namespace HRMS.API.Service.Attendance
                 RequestedCheckOutTime = reqCheckOut,
                 Reason = request.Reason.Trim(),
                 Status = 0, // Pending
-                CreatedAt = DateTime.Now
+                CreatedAt = HRMS.API.Helpers.DateTimeHelper.Now
             };
 
             await _correctionRepo.AddAsync(correction);
@@ -186,7 +186,7 @@ namespace HRMS.API.Service.Attendance
                 throw new Exception("A comment is mandatory when rejecting a correction request.");
             }
 
-            var now = DateTime.Now;
+            var now = HRMS.API.Helpers.DateTimeHelper.Now;
             correction.ReviewedBy = reviewerUserId;
             correction.ReviewedAt = now;
             correction.ReviewerComment = review.ReviewerComment?.Trim();
@@ -227,10 +227,10 @@ namespace HRMS.API.Service.Attendance
                     attendance.WorkedMinutes = Math.Max(0, (int)worked.TotalMinutes);
                 }
 
-                // Check-in punctuality (08:00 AM)
+                // Check-in punctuality (08:30 AM)
                 if (attendance.CheckInTime.HasValue)
                 {
-                    var normalStart = new TimeOnly(8, 0);
+                    var normalStart = new TimeOnly(8, 30);
                     var actualStart = TimeOnly.FromDateTime(attendance.CheckInTime.Value);
                     if (actualStart > normalStart)
                     {
@@ -244,10 +244,10 @@ namespace HRMS.API.Service.Attendance
                     }
                 }
 
-                // Check-out / OT / early departure (05:00 PM)
+                // Check-out / OT / early departure (07:30 PM / 19:30)
                 if (attendance.CheckOutTime.HasValue)
                 {
-                    var normalEnd = new TimeOnly(17, 0);
+                    var normalEnd = new TimeOnly(19, 30);
                     var actualEnd = TimeOnly.FromDateTime(attendance.CheckOutTime.Value);
 
                     if (actualEnd < normalEnd)
@@ -324,7 +324,7 @@ namespace HRMS.API.Service.Attendance
             }
 
             correction.Status = 3; // Cancelled
-            correction.UpdatedAt = DateTime.Now;
+            correction.UpdatedAt = HRMS.API.Helpers.DateTimeHelper.Now;
 
             _correctionRepo.Update(correction);
             await _correctionRepo.SaveChangesAsync();

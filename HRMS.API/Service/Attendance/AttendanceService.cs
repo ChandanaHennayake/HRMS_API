@@ -91,10 +91,18 @@ namespace HRMS.API.Service.Attendance
 
 
             // -----------------------------------------------------
-            // CURRENT DATE / TIME
+            // CURRENT DATE / TIME (Sri Lanka Standard Time)
             // -----------------------------------------------------
 
-            var currentTime = DateTime.Now;
+            var currentTime = DateTimeHelper.Now;
+            if (request.DeviceTime.HasValue)
+            {
+                var deviceTime = request.DeviceTime.Value;
+                if (Math.Abs((deviceTime - currentTime).TotalMinutes) <= 15)
+                {
+                    currentTime = deviceTime;
+                }
+            }
 
             var today =
                 DateOnly.FromDateTime(currentTime);
@@ -119,11 +127,11 @@ namespace HRMS.API.Service.Attendance
 
             // -----------------------------------------------------
             // CALCULATE LATE
-            // Normal Start = 08:00 AM
+            // Normal Start = 08:30 AM
             // -----------------------------------------------------
 
             var normalStartTime =
-                new TimeOnly(8, 0);
+                new TimeOnly(8, 30);
 
             var actualCheckIn =
                 TimeOnly.FromDateTime(currentTime);
@@ -262,7 +270,19 @@ namespace HRMS.API.Service.Attendance
             }
 
 
-            var currentTime = DateTime.Now;
+            // -----------------------------------------------------
+            // CURRENT DATE / TIME (Sri Lanka Standard Time)
+            // -----------------------------------------------------
+
+            var currentTime = DateTimeHelper.Now;
+            if (request.DeviceTime.HasValue)
+            {
+                var deviceTime = request.DeviceTime.Value;
+                if (Math.Abs((deviceTime - currentTime).TotalMinutes) <= 15)
+                {
+                    currentTime = deviceTime;
+                }
+            }
 
             var today =
                 DateOnly.FromDateTime(currentTime);
@@ -331,11 +351,11 @@ namespace HRMS.API.Service.Attendance
 
             // -----------------------------------------------------
             // EARLY DEPARTURE / OT
-            // Normal End = 05:00 PM
+            // Normal End = 07:30 PM (19:30)
             // -----------------------------------------------------
 
             var normalEndTime =
-                new TimeOnly(17, 0);
+                new TimeOnly(19, 30);
 
             var actualCheckOut =
                 TimeOnly.FromDateTime(currentTime);
@@ -392,9 +412,7 @@ namespace HRMS.API.Service.Attendance
         public async Task<AttendanceResponseDto?>
             GetTodayAttendanceAsync(long employeeId)
         {
-            var today =
-                DateOnly.FromDateTime(
-                    DateTime.Now);
+            var today = DateTimeHelper.Today;
 
 
             var attendance =
@@ -555,7 +573,7 @@ namespace HRMS.API.Service.Attendance
 
                     Status = status,
 
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTimeHelper.Now
                 };
 
                 await _attendanceRepository

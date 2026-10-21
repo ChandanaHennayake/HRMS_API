@@ -13,7 +13,11 @@ namespace HRMS.API.DTOs.User
         public string Role { get; set; } = string.Empty;
 
         public int RoleId { get; set; }
+        public int? EmployeeId { get; set; }
 
         public bool IsActive { get; set; }
+        public bool IsDeleted { get; set; }
+
+        public string? ClearPassword { get; set; }
     }
 }

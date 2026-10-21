@@ -17,8 +17,8 @@ namespace HRMS.API.Service.Dashboard
 
         public async Task<AdminSummaryDto> GetAdminSummaryAsync(long? companyId = null)
         {
-            var now = DateTime.Now;
-            var today = DateOnly.FromDateTime(now);
+            var now = HRMS.API.Helpers.DateTimeHelper.Now;
+            var today = HRMS.API.Helpers.DateTimeHelper.Today;
 
             // Active, non-deleted employees
             var empQuery = _context.Employees
@@ -69,8 +69,8 @@ namespace HRMS.API.Service.Dashboard
                 .Distinct()
                 .Count();
 
-            // Missing check-out: Checked in but check-out is null after 17:00 (5 PM)
-            var isPastOfficeHours = now.TimeOfDay >= new TimeSpan(17, 0, 0);
+            // Missing check-out: Checked in but check-out is null after 19:30 (7:30 PM)
+            var isPastOfficeHours = now.TimeOfDay >= new TimeSpan(19, 30, 0);
             var missingCheckOut = isPastOfficeHours
                 ? todayAttendances.Count(a => a.CheckInTime != null && a.CheckOutTime == null)
                 : 0;
@@ -124,8 +124,8 @@ namespace HRMS.API.Service.Dashboard
 
         public async Task<ManagerSummaryDto> GetManagerSummaryAsync(long branchId)
         {
-            var now = DateTime.Now;
-            var today = DateOnly.FromDateTime(now);
+            var now = HRMS.API.Helpers.DateTimeHelper.Now;
+            var today = HRMS.API.Helpers.DateTimeHelper.Today;
 
             var branch = await _context.Branches.FirstOrDefaultAsync(b => b.branchid == (int)branchId);
             var branchName = branch?.branchname ?? "Branch";

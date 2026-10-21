@@ -1,4 +1,4 @@
-﻿using ABANS_BAN.DTOs.Attendance;
+using ABANS_BAN.DTOs.Attendance;
 using HRMS.API.Data;
 using Microsoft.EntityFrameworkCore;
 using AttendanceEntity = HRMS.API.Entities.Attendance;
@@ -56,15 +56,11 @@ namespace HRMS.API.Repository.Attendance
                     ? employeeId.Value
                     : (object)DBNull.Value;
 
-            var fromDateParameter =
-                fromDate.HasValue
-                    ? fromDate.Value
-                    : (object)DBNull.Value;
+            var effectiveFromDate = fromDate ?? HRMS.API.Helpers.DateTimeHelper.Today;
+            var effectiveToDate = toDate ?? HRMS.API.Helpers.DateTimeHelper.Today;
 
-            var toDateParameter =
-                toDate.HasValue
-                    ? toDate.Value
-                    : (object)DBNull.Value;
+            var fromDateParameter = (object)effectiveFromDate;
+            var toDateParameter = (object)effectiveToDate;
 
 
             return await _context.Database
