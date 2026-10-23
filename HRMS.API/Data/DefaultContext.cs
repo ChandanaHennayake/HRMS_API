@@ -357,6 +357,92 @@ public partial class DefaultContext : DbContext
                 .HasConstraintName("userbranch_userid_fkey");
         });
 
+        modelBuilder.Entity<EmployeeSalary>(entity =>
+        {
+            entity.ToTable("EmployeeSalary");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BaseSalary).HasPrecision(18, 2);
+            entity.Property(e => e.BankAccountNo).HasMaxLength(50);
+            entity.Property(e => e.PaymentMode).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<EmployeeSalaryComponent>(entity =>
+        {
+            entity.ToTable("EmployeeSalaryComponent");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Amount).HasColumnName("Amount").HasPrecision(18, 2);
+        });
+
+        modelBuilder.Entity<Payslip>(entity =>
+        {
+            entity.ToTable("Payslip");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BaseSalary).HasPrecision(18, 2);
+            entity.Property(e => e.TotalAllowances).HasPrecision(18, 2);
+            entity.Property(e => e.OvertimeHours).HasPrecision(5, 2);
+            entity.Property(e => e.OvertimePay).HasPrecision(18, 2);
+            entity.Property(e => e.GrossEarnings).HasPrecision(18, 2);
+            entity.Property(e => e.NoPayDays).HasPrecision(5, 2);
+            entity.Property(e => e.NoPayDeduction).HasPrecision(18, 2);
+            entity.Property(e => e.GrossEpfSalary).HasPrecision(18, 2);
+            entity.Property(e => e.EmployeeEpf).HasPrecision(18, 2);
+            entity.Property(e => e.EmployerEpf).HasPrecision(18, 2);
+            entity.Property(e => e.EmployerEtf).HasPrecision(18, 2);
+            entity.Property(e => e.ApitTax).HasPrecision(18, 2);
+            entity.Property(e => e.OtherDeductions).HasPrecision(18, 2);
+            entity.Property(e => e.TotalDeductions).HasPrecision(18, 2);
+            entity.Property(e => e.NetSalary).HasPrecision(18, 2);
+            entity.Property(e => e.PaymentStatus).HasMaxLength(30);
+        });
+
+        modelBuilder.Entity<PayslipItem>(entity =>
+        {
+            entity.ToTable("PayslipItem");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Amount).HasColumnName("Amount").HasPrecision(18, 2);
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Code).HasMaxLength(30);
+        });
+
+        modelBuilder.Entity<SalaryComponent>(entity =>
+        {
+            entity.ToTable("SalaryComponent");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Code).HasMaxLength(30);
+        });
+
+        modelBuilder.Entity<SalaryStructure>(entity =>
+        {
+            entity.ToTable("SalaryStructure");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<SalaryStructureComponent>(entity =>
+        {
+            entity.ToTable("SalaryStructureComponent");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DefaultAmount).HasPrecision(18, 2);
+            entity.Property(e => e.PercentageOfBasic).HasPrecision(5, 2);
+        });
+
+        modelBuilder.Entity<PayrollPeriod>(entity =>
+        {
+            entity.ToTable("PayrollPeriod");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<PayrollRun>(entity =>
+        {
+            entity.ToTable("PayrollRun");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TotalGross).HasPrecision(18, 2);
+            entity.Property(e => e.TotalNet).HasPrecision(18, 2);
+            entity.Property(e => e.TotalEmployerCost).HasPrecision(18, 2);
+        });
+
         OnModelCreatingPartial(modelBuilder);
     }
 

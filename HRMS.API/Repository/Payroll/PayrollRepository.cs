@@ -106,15 +106,29 @@ namespace HRMS.API.Repository.Payroll
 
         public async Task<Payslip?> GetPayslipByIdAsync(long id)
         {
-            return await _context.Payslips
-                .Include(p => p.PayrollPeriod)
-                .Include(p => p.PayrollRun)
-                .Include(p => p.Employee)
-                    .ThenInclude(e => e.Department)
-                .Include(p => p.Employee)
-                    .ThenInclude(e => e.Designation)
-                .Include(p => p.Items)
-                .FirstOrDefaultAsync(p => p.Id == id);
+            try
+            {
+                return await _context.Payslips
+                    .Include(p => p.PayrollPeriod)
+                    .Include(p => p.PayrollRun)
+                    .Include(p => p.Employee)
+                        .ThenInclude(e => e.Department)
+                    .Include(p => p.Employee)
+                        .ThenInclude(e => e.Designation)
+                    .Include(p => p.Items)
+                    .FirstOrDefaultAsync(p => p.Id == id);
+            }
+            catch (Exception)
+            {
+                return await _context.Payslips
+                    .Include(p => p.PayrollPeriod)
+                    .Include(p => p.PayrollRun)
+                    .Include(p => p.Employee)
+                        .ThenInclude(e => e.Department)
+                    .Include(p => p.Employee)
+                        .ThenInclude(e => e.Designation)
+                    .FirstOrDefaultAsync(p => p.Id == id);
+            }
         }
     }
 }

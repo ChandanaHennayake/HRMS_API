@@ -614,25 +614,32 @@ namespace HRMS.API.Service.Payroll
             {
                 foreach (var c in salary.Components)
                 {
-                    if (c.SalaryComponent != null && c.SalaryComponent.IsActive)
+                    try
                     {
-                        if (c.SalaryComponent.ComponentType == 1) // Earning
+                        if (c.SalaryComponent != null && c.SalaryComponent.IsActive)
                         {
-                            preview.StandardAllowances.Add(new PayrollManualItemDto
+                            if (c.SalaryComponent.ComponentType == 1) // Earning
                             {
-                                Name = c.SalaryComponent.Name,
-                                Amount = c.Amount,
-                                IsEpfApplicable = c.SalaryComponent.IsEpfApplicable
-                            });
-                        }
-                        else if (c.SalaryComponent.ComponentType == 2) // Deduction
-                        {
-                            preview.StandardDeductions.Add(new PayrollManualItemDto
+                                preview.StandardAllowances.Add(new PayrollManualItemDto
+                                {
+                                    Name = c.SalaryComponent.Name,
+                                    Amount = c.Amount,
+                                    IsEpfApplicable = c.SalaryComponent.IsEpfApplicable
+                                });
+                            }
+                            else if (c.SalaryComponent.ComponentType == 2) // Deduction
                             {
-                                Name = c.SalaryComponent.Name,
-                                Amount = c.Amount
-                            });
+                                preview.StandardDeductions.Add(new PayrollManualItemDto
+                                {
+                                    Name = c.SalaryComponent.Name,
+                                    Amount = c.Amount
+                                });
+                            }
                         }
+                    }
+                    catch (Exception)
+                    {
+                        // Non-fatal if single component cannot be evaluated
                     }
                 }
             }
@@ -719,9 +726,18 @@ namespace HRMS.API.Service.Payroll
             decimal grossEpfSalary = 0m;
 
             // 4. Find existing Payslip or create new
-            var payslip = await _context.Payslips
-                .Include(p => p.Items)
-                .FirstOrDefaultAsync(p => p.EmployeeId == request.EmployeeId && p.PeriodId == period.Id);
+            Payslip? payslip = null;
+            try
+            {
+                payslip = await _context.Payslips
+                    .Include(p => p.Items)
+                    .FirstOrDefaultAsync(p => p.EmployeeId == request.EmployeeId && p.PeriodId == period.Id);
+            }
+            catch (Exception)
+            {
+                payslip = await _context.Payslips
+                    .FirstOrDefaultAsync(p => p.EmployeeId == request.EmployeeId && p.PeriodId == period.Id);
+            }
 
             if (payslip == null)
             {
@@ -738,9 +754,15 @@ namespace HRMS.API.Service.Payroll
             else
             {
                 // Remove existing items to replace with updated breakdown
-                if (payslip.Items != null && payslip.Items.Any())
+                try
                 {
-                    _context.PayslipItems.RemoveRange(payslip.Items);
+                    if (payslip.Items != null && payslip.Items.Any())
+                    {
+                        _context.PayslipItems.RemoveRange(payslip.Items);
+                    }
+                }
+                catch (Exception)
+                {
                 }
             }
 

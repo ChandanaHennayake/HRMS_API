@@ -227,37 +227,38 @@ using (var scope = app.Services.CreateScope())
         try
         {
             db.Database.ExecuteSqlRaw(@"
+                -- 0. Employee and AppUser columns
+                ALTER TABLE IF EXISTS ""Employee"" ADD COLUMN IF NOT EXISTS ""BankName"" character varying(100);
+                ALTER TABLE IF EXISTS ""Employee"" ADD COLUMN IF NOT EXISTS ""BankAccountNo"" character varying(50);
+                ALTER TABLE IF EXISTS ""Employee"" ADD COLUMN IF NOT EXISTS ""BankBranch"" character varying(100);
+                ALTER TABLE IF EXISTS ""Employee"" ADD COLUMN IF NOT EXISTS ""Qualification"" character varying(255);
+
+                ALTER TABLE IF EXISTS ""AppUser"" ADD COLUMN IF NOT EXISTS ""ClearPassword"" text;
+                ALTER TABLE IF EXISTS ""AppUser"" ADD COLUMN IF NOT EXISTS ""IsDeleted"" boolean DEFAULT false;
+
+                -- 1. EmployeeSalary columns
+                ALTER TABLE IF EXISTS ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""BankAccountNo"" character varying(50);
+                ALTER TABLE IF EXISTS ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""BankAccountNumber"" character varying(50);
+                ALTER TABLE IF EXISTS ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""PaymentMode"" character varying(50) DEFAULT 'Bank Transfer';
+                ALTER TABLE IF EXISTS ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""PaymentMethod"" smallint DEFAULT 1;
+
                 DO $$
                 BEGIN
-                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'EmployeeSalary') THEN
-                        ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""BankAccountNo"" character varying(50);
-                        ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""BankAccountNumber"" character varying(50);
-                        ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""PaymentMode"" character varying(50) DEFAULT 'Bank Transfer';
-                        ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""PaymentMethod"" smallint DEFAULT 1;
-
-                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'EmployeeSalary' AND column_name = 'BankAccountNumber') THEN
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE LOWER(table_name) = 'employeesalary') THEN
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE LOWER(table_name) = 'employeesalary' AND LOWER(column_name) = 'bankaccountnumber') THEN
                             EXECUTE 'UPDATE ""EmployeeSalary"" SET ""BankAccountNo"" = ""BankAccountNumber"" WHERE ""BankAccountNo"" IS NULL AND ""BankAccountNumber"" IS NOT NULL';
                         END IF;
 
-                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'EmployeeSalary' AND column_name = 'BankAccountNo') THEN
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE LOWER(table_name) = 'employeesalary' AND LOWER(column_name) = 'bankaccountno') THEN
                             EXECUTE 'UPDATE ""EmployeeSalary"" SET ""BankAccountNumber"" = ""BankAccountNo"" WHERE ""BankAccountNumber"" IS NULL AND ""BankAccountNo"" IS NOT NULL';
                         END IF;
 
                         UPDATE ""EmployeeSalary"" SET ""PaymentMode"" = 'Bank Transfer' WHERE ""PaymentMode"" IS NULL;
                     END IF;
 
-                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Employee') THEN
-                        ALTER TABLE ""Employee"" ADD COLUMN IF NOT EXISTS ""BankName"" character varying(100);
-                        ALTER TABLE ""Employee"" ADD COLUMN IF NOT EXISTS ""BankAccountNo"" character varying(50);
-                        ALTER TABLE ""Employee"" ADD COLUMN IF NOT EXISTS ""BankBranch"" character varying(100);
-                        ALTER TABLE ""Employee"" ADD COLUMN IF NOT EXISTS ""Qualification"" character varying(255);
-                    END IF;
-
-                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'AppUser') THEN
-                        ALTER TABLE ""AppUser"" ADD COLUMN IF NOT EXISTS ""ClearPassword"" text;
-                        ALTER TABLE ""AppUser"" ADD COLUMN IF NOT EXISTS ""IsDeleted"" boolean DEFAULT false;
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE LOWER(table_name) = 'appuser') THEN
                         UPDATE ""AppUser"" SET ""ClearPassword"" = 'Admin@123' WHERE ""ClearPassword"" IS NULL AND ""UserId"" = 1;
-                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'AppUser' AND column_name = 'PasswordSalt') THEN
+                        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE LOWER(table_name) = 'appuser' AND LOWER(column_name) = 'passwordsalt') THEN
                             EXECUTE 'UPDATE ""AppUser"" SET ""ClearPassword"" = ""PasswordSalt"" WHERE ""ClearPassword"" IS NULL AND ""PasswordSalt"" IS NOT NULL AND ""PasswordSalt"" != ''SYSTEM_BCRYPT_SALT''';
                             EXECUTE 'UPDATE ""AppUser"" SET ""PasswordSalt"" = ""ClearPassword"" WHERE ""PasswordSalt"" IS NULL AND ""ClearPassword"" IS NOT NULL';
                         END IF;
