@@ -245,6 +245,26 @@ BEGIN
         UPDATE ""SalaryStructureComponent"" SET ""DefaultAmount"" = ""amount"" WHERE (""DefaultAmount"" IS NULL OR ""DefaultAmount"" = 0) AND ""amount"" IS NOT NULL;
     END IF;
 END $$;
+
+-- 8. AppVersion Table Reconciliation
+CREATE TABLE IF NOT EXISTS ""AppVersion"" (
+    ""Id"" SERIAL PRIMARY KEY,
+    ""Platform"" VARCHAR(50) NOT NULL DEFAULT 'Android',
+    ""LatestVersion"" VARCHAR(50) NOT NULL DEFAULT '1.0.3',
+    ""MinimumVersion"" VARCHAR(50) NOT NULL DEFAULT '1.0.3',
+    ""ForceUpdate"" BOOLEAN NOT NULL DEFAULT TRUE,
+    ""UpdateUrl"" VARCHAR(500),
+    ""ReleaseNotes"" VARCHAR(500),
+    ""UpdatedAt"" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO ""AppVersion"" (""Platform"", ""LatestVersion"", ""MinimumVersion"", ""ForceUpdate"", ""ReleaseNotes"")
+SELECT 'Android', '1.0.3', '1.0.3', TRUE, 'Official AlienHR Enterprise v1.0.3 release with payroll management and security enhancements.'
+WHERE NOT EXISTS (SELECT 1 FROM ""AppVersion"" WHERE ""Platform"" = 'Android');
+
+INSERT INTO ""AppVersion"" (""Platform"", ""LatestVersion"", ""MinimumVersion"", ""ForceUpdate"", ""ReleaseNotes"")
+SELECT 'iOS', '1.0.3', '1.0.3', TRUE, 'Official AlienHR Enterprise v1.0.3 release.'
+WHERE NOT EXISTS (SELECT 1 FROM ""AppVersion"" WHERE ""Platform"" = 'iOS');
 ";
 
                 await context.Database.ExecuteSqlRawAsync(sql);
