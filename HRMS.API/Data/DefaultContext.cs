@@ -80,6 +80,8 @@ public partial class DefaultContext : DbContext
 
     public virtual DbSet<SystemNotice> SystemNotices { get; set; }
 
+    public virtual DbSet<AppVersion> AppVersions { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
