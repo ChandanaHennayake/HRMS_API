@@ -185,106 +185,146 @@ namespace HRMS.API.Services
 
         public async Task<EmployeeDto> CreateAsync(CreateEmployeeDto request)
         {
-            // 1. Check employee code
-            var employeeCodeExists =
-                await _employeeRepository.EmployeeCodeExistsAsync(
-                    request.CompanyId,
-                    request.EmployeeCode.Trim()
-                );
-
-            if (employeeCodeExists)
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                throw new Exception("Employee code already exists.");
-            }
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    // 1. Check employee code
+                    var employeeCodeExists =
+                        await _employeeRepository.EmployeeCodeExistsAsync(
+                            request.CompanyId,
+                            request.EmployeeCode.Trim()
+                        );
 
-            // 2. Create employee entity
-            var employee = new Employee
-            {
-                CompanyId = request.CompanyId,
-                BranchId = request.BranchId,
+                    if (employeeCodeExists)
+                    {
+                        throw new Exception("Employee code already exists.");
+                    }
 
-                EmployeeCode = request.EmployeeCode.Trim(),
-                FirstName = request.FirstName.Trim(),
-                LastName = request.LastName?.Trim(),
+                    // Pre-validate Username and Email before attempting write
+                    var trimmedUsername = request.Username?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(trimmedUsername))
+                    {
+                        throw new Exception("Username is required for employee login.");
+                    }
 
-                Email = request.Email?.Trim(),
-                Phone = request.Phone?.Trim(),
+                    var usernameExists = await _context.AppUsers.AnyAsync(
+                        u => u.Username.ToLower() == trimmedUsername.ToLower() &&
+                             (u.IsDeleted == null || !u.IsDeleted.Value)
+                    );
+                    if (usernameExists)
+                    {
+                        throw new Exception("Username already exists.");
+                    }
 
-                DepartmentId = request.DepartmentId,
-                DesignationId = request.DesignationId,
-                EmploymentTypeId = request.EmploymentTypeId,
+                    var trimmedEmail = request.Email?.Trim();
+                    if (!string.IsNullOrWhiteSpace(trimmedEmail))
+                    {
+                        var emailExists = await _context.AppUsers.AnyAsync(
+                            u => u.Email != null && u.Email.ToLower() == trimmedEmail.ToLower() &&
+                                 (u.IsDeleted == null || !u.IsDeleted.Value)
+                        );
+                        if (emailExists)
+                        {
+                            throw new Exception("User account with this email already exists.");
+                        }
+                    }
 
-                DateOfBirth = request.DateOfBirth,
-                JoinedDate = request.JoinedDate,
+                    // 2. Create employee entity
+                    var employee = new Employee
+                    {
+                        CompanyId = request.CompanyId,
+                        BranchId = request.BranchId,
 
-                Gender = request.Gender?.Trim(),
+                        EmployeeCode = request.EmployeeCode.Trim(),
+                        FirstName = request.FirstName.Trim(),
+                        LastName = request.LastName?.Trim(),
 
-                AddressLine1 = request.AddressLine1?.Trim(),
-                AddressLine2 = request.AddressLine2?.Trim(),
-                City = request.City?.Trim(),
+                        Email = trimmedEmail,
+                        Phone = request.Phone?.Trim(),
 
-                BankName = request.BankName?.Trim(),
-                BankAccountNo = request.BankAccountNo?.Trim(),
-                BankBranch = request.BankBranch?.Trim(),
-                Qualification = request.Qualification?.Trim(),
+                        DepartmentId = request.DepartmentId,
+                        DesignationId = request.DesignationId,
+                        EmploymentTypeId = request.EmploymentTypeId,
 
-                IsActive = true,
-                IsDeleted = false,
+                        DateOfBirth = request.DateOfBirth,
+                        JoinedDate = request.JoinedDate,
 
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = request.CreatedBy
-            };
+                        Gender = request.Gender?.Trim(),
 
-            // 3. Save employee first
-            // After SaveChangesAsync(), createdEmployee.Id should contain
-            // the generated Employee ID
-            var createdEmployee =
-                await _employeeRepository.CreateAsync(employee);
+                        AddressLine1 = request.AddressLine1?.Trim(),
+                        AddressLine2 = request.AddressLine2?.Trim(),
+                        City = request.City?.Trim(),
 
-            // 4. Make sure Employee ID was generated
-            if (createdEmployee.Id <= 0)
-            {
-                throw new Exception(
-                    "Employee was created but Employee ID was not generated."
-                );
-            }
+                        BankName = request.BankName?.Trim(),
+                        BankAccountNo = request.BankAccountNo?.Trim(),
+                        BankBranch = request.BankBranch?.Trim(),
+                        Qualification = request.Qualification?.Trim(),
 
-            // 5. Create user login for this employee
-            var createUserRequest = new CreateUserRequest
-            {
-                CompanyId = Convert.ToInt32(request.CompanyId),
-                BranchId = Convert.ToInt32(request.BranchId),
+                        IsActive = true,
+                        IsDeleted = false,
 
-                RoleId = request.RoleId,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = request.CreatedBy
+                    };
 
-                // IMPORTANT:
-                // Pass the newly created employee ID
-                EmployeeId = Convert.ToInt32(createdEmployee.Id),
+                    // 3. Save employee first within transaction
+                    var createdEmployee =
+                        await _employeeRepository.CreateAsync(employee);
 
-                Username = request.Username.Trim(),
-                Email = request.Email?.Trim() ?? string.Empty,
-                Password = request.Password,
+                    if (createdEmployee.Id <= 0)
+                    {
+                        throw new Exception(
+                            "Employee was created but Employee ID was not generated."
+                        );
+                    }
 
-                FirstName = request.FirstName.Trim(),
-                LastName = request.LastName?.Trim() ?? string.Empty,
-                Phone = request.Phone?.Trim() ?? string.Empty
-            };
+                    // 4. Create user login for this employee
+                    var createUserRequest = new CreateUserRequest
+                    {
+                        CompanyId = Convert.ToInt32(request.CompanyId),
+                        BranchId = Convert.ToInt32(request.BranchId),
 
-            // 6. Create login user
-            await _userService.CreateAsync(createUserRequest);
+                        RoleId = request.RoleId,
+                        EmployeeId = Convert.ToInt32(createdEmployee.Id),
 
-            // 7. Return employee
-            var result =
-                await _employeeRepository.GetByIdAsync(createdEmployee.Id);
+                        Username = trimmedUsername,
+                        Email = trimmedEmail ?? string.Empty,
+                        Password = request.Password,
 
-            if (result == null)
-            {
-                throw new Exception(
-                    "Employee created but could not be retrieved."
-                );
-            }
+                        FirstName = request.FirstName.Trim(),
+                        LastName = request.LastName?.Trim() ?? string.Empty,
+                        Phone = request.Phone?.Trim() ?? string.Empty
+                    };
 
-            return result;
+                    // 5. Create login user
+                    await _userService.CreateAsync(createUserRequest);
+
+                    // 6. Retrieve created employee DTO
+                    var result =
+                        await _employeeRepository.GetByIdAsync(createdEmployee.Id);
+
+                    if (result == null)
+                    {
+                        throw new Exception(
+                            "Employee created but could not be retrieved."
+                        );
+                    }
+
+                    // 7. Commit transaction atomically
+                    await transaction.CommitAsync();
+
+                    return result;
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    _context.ChangeTracker.Clear();
+                    throw;
+                }
+            });
         }
         public async Task<IEnumerable<EmployeeDto>> GetAllAsync()
         {
