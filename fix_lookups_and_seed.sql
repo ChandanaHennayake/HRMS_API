@@ -100,6 +100,9 @@ ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "Month" integer;
 ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "Name" character varying(100);
 ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "PeriodName" character varying(100);
 ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "IsClosed" boolean DEFAULT false;
+ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "CutoffDate" date;
+ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "Status" smallint DEFAULT 0;
+ALTER TABLE "PayrollPeriod" ADD COLUMN IF NOT EXISTS "CreatedBy" bigint;
 DO $$ 
 BEGIN 
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayrollPeriod' AND column_name = 'PeriodName') THEN
@@ -110,10 +113,21 @@ BEGIN
         ALTER TABLE "PayrollPeriod" ALTER COLUMN "Name" DROP NOT NULL;
         ALTER TABLE "PayrollPeriod" ALTER COLUMN "Name" SET DEFAULT '';
     END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayrollPeriod' AND column_name = 'CutoffDate') THEN
+        ALTER TABLE "PayrollPeriod" ALTER COLUMN "CutoffDate" DROP NOT NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayrollPeriod' AND column_name = 'Status') THEN
+        ALTER TABLE "PayrollPeriod" ALTER COLUMN "Status" DROP NOT NULL;
+        ALTER TABLE "PayrollPeriod" ALTER COLUMN "Status" SET DEFAULT 0;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayrollPeriod' AND column_name = 'CreatedBy') THEN
+        ALTER TABLE "PayrollPeriod" ALTER COLUMN "CreatedBy" DROP NOT NULL;
+    END IF;
     UPDATE "PayrollPeriod" SET "Name" = COALESCE("Name", "PeriodName", 'Period');
     UPDATE "PayrollPeriod" SET "PeriodName" = COALESCE("PeriodName", "Name", 'Period');
     UPDATE "PayrollPeriod" SET "Year" = EXTRACT(YEAR FROM "StartDate") WHERE "Year" IS NULL AND "StartDate" IS NOT NULL;
     UPDATE "PayrollPeriod" SET "Month" = EXTRACT(MONTH FROM "StartDate") WHERE "Month" IS NULL AND "StartDate" IS NOT NULL;
+    UPDATE "PayrollPeriod" SET "CutoffDate" = COALESCE("CutoffDate", "EndDate") WHERE "CutoffDate" IS NULL;
 END $$;
 
 -- PayrollRun
@@ -126,12 +140,21 @@ ALTER TABLE "PayrollRun" ADD COLUMN IF NOT EXISTS "Comments" character varying(5
 DO $$ 
 BEGIN 
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayrollRun' AND column_name = 'TotalEmployees') THEN
+        ALTER TABLE "PayrollRun" ALTER COLUMN "TotalEmployees" DROP NOT NULL;
+        ALTER TABLE "PayrollRun" ALTER COLUMN "TotalEmployees" SET DEFAULT 0;
         UPDATE "PayrollRun" SET "ProcessedCount" = "TotalEmployees" WHERE "ProcessedCount" = 0 AND "TotalEmployees" > 0;
     END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayrollRun' AND column_name = 'TotalDeductions') THEN
+        ALTER TABLE "PayrollRun" ALTER COLUMN "TotalDeductions" DROP NOT NULL;
+        ALTER TABLE "PayrollRun" ALTER COLUMN "TotalDeductions" SET DEFAULT 0.0;
+    END IF;
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayrollRun' AND column_name = 'Notes') THEN
+        ALTER TABLE "PayrollRun" ALTER COLUMN "Notes" DROP NOT NULL;
         UPDATE "PayrollRun" SET "Comments" = "Notes" WHERE "Comments" IS NULL;
     END IF;
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayrollRun' AND column_name = 'RunDate') THEN
+        ALTER TABLE "PayrollRun" ALTER COLUMN "RunDate" DROP NOT NULL;
+        ALTER TABLE "PayrollRun" ALTER COLUMN "RunDate" SET DEFAULT CURRENT_TIMESTAMP;
         UPDATE "PayrollRun" SET "ProcessedAt" = "RunDate" WHERE "ProcessedAt" IS NULL;
     END IF;
 END $$;
@@ -156,10 +179,21 @@ ALTER TABLE "Payslip" ADD COLUMN IF NOT EXISTS "CreatedAt" timestamp without tim
 DO $$ 
 BEGIN 
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Payslip' AND column_name = 'GrossSalary') THEN
+        ALTER TABLE "Payslip" ALTER COLUMN "GrossSalary" DROP NOT NULL;
+        ALTER TABLE "Payslip" ALTER COLUMN "GrossSalary" SET DEFAULT 0.0;
         UPDATE "Payslip" SET "GrossEarnings" = "GrossSalary" WHERE "GrossEarnings" = 0 AND "GrossSalary" > 0;
     END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Payslip' AND column_name = 'Status') THEN
+        ALTER TABLE "Payslip" ALTER COLUMN "Status" DROP NOT NULL;
+        ALTER TABLE "Payslip" ALTER COLUMN "Status" SET DEFAULT 0;
+    END IF;
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Payslip' AND column_name = 'GeneratedAt') THEN
+        ALTER TABLE "Payslip" ALTER COLUMN "GeneratedAt" DROP NOT NULL;
+        ALTER TABLE "Payslip" ALTER COLUMN "GeneratedAt" SET DEFAULT CURRENT_TIMESTAMP;
         UPDATE "Payslip" SET "CreatedAt" = "GeneratedAt" WHERE "CreatedAt" IS NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Payslip' AND column_name = 'PaymentDate') THEN
+        ALTER TABLE "Payslip" ALTER COLUMN "PaymentDate" DROP NOT NULL;
     END IF;
 END $$;
 

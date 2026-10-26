@@ -29,7 +29,13 @@ public partial class PayrollPeriod
 
     public DateOnly EndDate { get; set; }
 
+    public DateOnly? CutoffDate { get; set; }
+
     public bool IsClosed { get; set; } = false;
+
+    public short Status { get; set; } = 0;
+
+    public long? CreatedBy { get; set; }
 
     [Column(TypeName = "timestamp without time zone")]
     public DateTime CreatedAt { get; set; } = DateTime.Now;

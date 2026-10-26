@@ -79,6 +79,8 @@ namespace HRMS.API.Service.Payroll
                     PeriodName = periodName,
                     StartDate = startDate,
                     EndDate = endDate,
+                    CutoffDate = endDate,
+                    Status = 0,
                     IsClosed = false,
                     CreatedAt = DateTime.Now
                 });
@@ -677,7 +679,11 @@ namespace HRMS.API.Service.Payroll
                     PeriodName = periodName,
                     StartDate = startDate,
                     EndDate = endDate,
-                    IsClosed = false
+                    CutoffDate = endDate,
+                    Status = 0,
+                    CreatedBy = savedBy,
+                    IsClosed = false,
+                    CreatedAt = DateTime.Now
                 });
             }
 
