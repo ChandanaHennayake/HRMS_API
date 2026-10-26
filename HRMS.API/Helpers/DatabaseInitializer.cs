@@ -332,6 +332,50 @@ WHERE NOT EXISTS (SELECT 1 FROM ""AppVersion"" WHERE ""Platform"" = 'Android');
 INSERT INTO ""AppVersion"" (""Platform"", ""LatestVersion"", ""MinimumVersion"", ""ForceUpdate"", ""ReleaseNotes"")
 SELECT 'iOS', '1.0.3', '1.0.3', TRUE, 'Official AlienHR Enterprise v1.0.3 release.'
 WHERE NOT EXISTS (SELECT 1 FROM ""AppVersion"" WHERE ""Platform"" = 'iOS');
+
+-- 9. ProfileChangeRequest Table Reconciliation
+CREATE TABLE IF NOT EXISTS ""ProfileChangeRequest"" (
+    ""Id"" BIGSERIAL PRIMARY KEY,
+    ""EmployeeId"" BIGINT NOT NULL,
+    ""UserId"" INTEGER,
+    ""CompanyId"" BIGINT NOT NULL DEFAULT 1,
+    ""BranchId"" BIGINT,
+    ""FirstName"" VARCHAR(100),
+    ""LastName"" VARCHAR(100),
+    ""Phone"" VARCHAR(30),
+    ""DateOfBirth"" DATE,
+    ""Gender"" VARCHAR(20),
+    ""AddressLine1"" VARCHAR(200),
+    ""AddressLine2"" VARCHAR(200),
+    ""City"" VARCHAR(100),
+    ""Qualification"" VARCHAR(255),
+    ""BankName"" VARCHAR(100),
+    ""BankAccountNo"" VARCHAR(50),
+    ""BankBranch"" VARCHAR(100),
+    ""CurrentFirstName"" VARCHAR(100),
+    ""CurrentLastName"" VARCHAR(100),
+    ""CurrentPhone"" VARCHAR(30),
+    ""CurrentDateOfBirth"" DATE,
+    ""CurrentGender"" VARCHAR(20),
+    ""CurrentAddressLine1"" VARCHAR(200),
+    ""CurrentAddressLine2"" VARCHAR(200),
+    ""CurrentCity"" VARCHAR(100),
+    ""CurrentQualification"" VARCHAR(255),
+    ""CurrentBankName"" VARCHAR(100),
+    ""CurrentBankAccountNo"" VARCHAR(50),
+    ""CurrentBankBranch"" VARCHAR(100),
+    ""Status"" SMALLINT NOT NULL DEFAULT 0,
+    ""Reason"" VARCHAR(500),
+    ""ReviewedBy"" BIGINT,
+    ""ReviewerName"" VARCHAR(150),
+    ""ReviewedAt"" TIMESTAMP WITHOUT TIME ZONE,
+    ""ReviewerComment"" VARCHAR(500),
+    ""CreatedAt"" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+    ""UpdatedAt"" TIMESTAMP WITHOUT TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS ""IX_ProfileChangeRequest_EmployeeId"" ON ""ProfileChangeRequest"" (""EmployeeId"");
+CREATE INDEX IF NOT EXISTS ""IX_ProfileChangeRequest_Status"" ON ""ProfileChangeRequest"" (""Status"");
 ";
 
                 await context.Database.ExecuteSqlRawAsync(sql);

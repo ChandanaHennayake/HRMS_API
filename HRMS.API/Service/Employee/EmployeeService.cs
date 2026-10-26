@@ -439,6 +439,26 @@ namespace HRMS.API.Services
             var linkedUser = await _context.AppUsers.FirstOrDefaultAsync(u => u.EmployeeId == (int)id || (!string.IsNullOrEmpty(employee.Email) && u.Email == employee.Email));
             if (linkedUser != null)
             {
+                linkedUser.FirstName = employee.FirstName;
+                linkedUser.LastName = employee.LastName ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(employee.Email))
+                {
+                    linkedUser.Email = employee.Email.Trim();
+                }
+                if (!string.IsNullOrWhiteSpace(employee.Phone))
+                {
+                    linkedUser.Phone = employee.Phone.Trim();
+                }
+                if (employee.BranchId > 0)
+                {
+                    linkedUser.BranchId = (int)employee.BranchId;
+                }
+                if (employee.CompanyId > 0)
+                {
+                    linkedUser.CompanyId = (int)employee.CompanyId;
+                }
+                linkedUser.EmployeeId = (int)id;
+
                 if (!string.IsNullOrWhiteSpace(request.Password))
                 {
                     linkedUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -463,6 +483,19 @@ namespace HRMS.API.Services
                     foreach (var t in tokens) t.isrevoked = true;
                 }
                 await _context.SaveChangesAsync();
+            }
+
+            // Synchronize active EmployeeSalary bank details if bank details were updated
+            if (!string.IsNullOrWhiteSpace(employee.BankAccountNo) || !string.IsNullOrWhiteSpace(employee.BankName))
+            {
+                var activeSalary = await _context.EmployeeSalaries.FirstOrDefaultAsync(s => s.EmployeeId == id && s.IsActive);
+                if (activeSalary != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(employee.BankName)) activeSalary.BankName = employee.BankName;
+                    if (!string.IsNullOrWhiteSpace(employee.BankAccountNo)) activeSalary.BankAccountNo = employee.BankAccountNo;
+                    activeSalary.UpdatedAt = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
             }
 
             return await _employeeRepository.GetByIdAsync(

@@ -192,6 +192,9 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
+// Employee Profile Change Request Service
+builder.Services.AddScoped<HRMS.API.Service.ProfileChange.IProfileChangeService, HRMS.API.Service.ProfileChange.ProfileChangeService>();
+
 // Enterprise Email Service & Gateway
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<IEmailService, EmailService>();

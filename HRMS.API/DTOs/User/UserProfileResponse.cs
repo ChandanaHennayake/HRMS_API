@@ -12,11 +12,27 @@ namespace HRMS.API.DTOs.User
         public int RoleId { get; set; }
 
         // Employee Details
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
         public string? EmployeeCode { get; set; }
         public string? DepartmentName { get; set; }
         public string? DesignationName { get; set; }
         public string? EmploymentTypeName { get; set; }
         public DateOnly? JoinedDate { get; set; }
+        public DateOnly? DateOfBirth { get; set; }
+        public string? Gender { get; set; }
+        public string? AddressLine1 { get; set; }
+        public string? AddressLine2 { get; set; }
+        public string? City { get; set; }
+        public string? Qualification { get; set; }
+
+        // Bank Account Details
+        public string? BankName { get; set; }
+        public string? BankAccountNo { get; set; }
+        public string? BankBranch { get; set; }
+
+        // Change Request Status
+        public bool HasPendingChangeRequest { get; set; }
 
         // Branch & Geofence
         public int? BranchId { get; set; }

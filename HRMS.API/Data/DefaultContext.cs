@@ -60,6 +60,8 @@ public partial class DefaultContext : DbContext
 
     public virtual DbSet<Notification> Notifications { get; set; }
 
+    public virtual DbSet<ProfileChangeRequest> ProfileChangeRequests { get; set; }
+
     public virtual DbSet<AuditLog> AuditLogs { get; set; }
 
     public virtual DbSet<LeaveType> LeaveTypes { get; set; }

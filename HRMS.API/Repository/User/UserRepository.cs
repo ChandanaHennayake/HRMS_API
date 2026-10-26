@@ -92,6 +92,8 @@ namespace HRMS.API.Repository.UserDetails
                     _ => "Employee"
                 });
 
+            bool hasPending = employee != null && await _context.ProfileChangeRequests.AnyAsync(r => r.EmployeeId == employee.Id && r.Status == 0);
+
             return new UserProfileResponse
             {
                 UserId = user.UserId,
@@ -102,11 +104,23 @@ namespace HRMS.API.Repository.UserDetails
                 Phone = user.Phone ?? employee?.Phone,
                 Role = roleName,
                 RoleId = user.RoleId,
+                FirstName = employee?.FirstName ?? user.FirstName,
+                LastName = employee?.LastName ?? user.LastName,
                 EmployeeCode = employee?.EmployeeCode,
                 DepartmentName = employee?.Department?.Name,
                 DesignationName = employee?.Designation?.Name,
                 EmploymentTypeName = employee?.EmploymentType?.Name,
                 JoinedDate = employee?.JoinedDate,
+                DateOfBirth = employee?.DateOfBirth,
+                Gender = employee?.Gender,
+                AddressLine1 = employee?.AddressLine1,
+                AddressLine2 = employee?.AddressLine2,
+                City = employee?.City,
+                Qualification = employee?.Qualification,
+                BankName = employee?.BankName,
+                BankAccountNo = employee?.BankAccountNo,
+                BankBranch = employee?.BankBranch,
+                HasPendingChangeRequest = hasPending,
                 BranchId = user.BranchId ?? (int?)employee?.BranchId,
                 BranchName = branch?.branchname,
                 BranchLatitude = branch?.Latitude,
