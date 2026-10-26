@@ -403,6 +403,7 @@ public partial class DefaultContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Amount).HasColumnName("Amount").HasPrecision(18, 2);
             entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.ComponentName).HasMaxLength(100);
             entity.Property(e => e.Code).HasMaxLength(100);
         });
 

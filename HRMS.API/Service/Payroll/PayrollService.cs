@@ -211,8 +211,10 @@ namespace HRMS.API.Service.Payroll
                     payslip.Items.Add(new PayslipItem
                     {
                         Name = a.Name,
+                        ComponentName = a.Name,
                         Code = a.Code,
                         ItemType = 1,
+                        Type = 1,
                         Amount = a.Amount,
                         IsEpfApplicable = a.IsEpfApplicable,
                         IsTaxable = a.IsTaxable
@@ -224,8 +226,10 @@ namespace HRMS.API.Service.Payroll
                     payslip.Items.Add(new PayslipItem
                     {
                         Name = d.Name,
+                        ComponentName = d.Name,
                         Code = d.Code,
                         ItemType = 2,
+                        Type = 2,
                         Amount = d.Amount,
                         IsEpfApplicable = d.IsEpfApplicable,
                         IsTaxable = d.IsTaxable
@@ -811,8 +815,10 @@ namespace HRMS.API.Service.Payroll
                     {
                         PayslipId = payslip.Id,
                         Name = name,
+                        ComponentName = name,
                         Code = code,
                         ItemType = 1, // Earning
+                        Type = 1,
                         Amount = al.Amount,
                         IsEpfApplicable = al.IsEpfApplicable,
                         IsTaxable = true
@@ -832,8 +838,10 @@ namespace HRMS.API.Service.Payroll
                     {
                         PayslipId = payslip.Id,
                         Name = name,
+                        ComponentName = name,
                         Code = code,
                         ItemType = 2, // Deduction
+                        Type = 2,
                         Amount = de.Amount,
                         IsEpfApplicable = false,
                         IsTaxable = false
@@ -850,8 +858,10 @@ namespace HRMS.API.Service.Payroll
                 {
                     PayslipId = payslip.Id,
                     Name = name,
+                    ComponentName = name,
                     Code = "NO_PAY",
                     ItemType = 2,
+                    Type = 2,
                     Amount = noPayDeduction,
                     IsEpfApplicable = false,
                     IsTaxable = false
@@ -867,8 +877,10 @@ namespace HRMS.API.Service.Payroll
                 {
                     PayslipId = payslip.Id,
                     Name = name,
+                    ComponentName = name,
                     Code = "EPF_EMP",
                     ItemType = 2,
+                    Type = 2,
                     Amount = employeeEpf,
                     IsEpfApplicable = true,
                     IsTaxable = false

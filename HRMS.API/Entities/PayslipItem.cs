@@ -17,12 +17,17 @@ public partial class PayslipItem
     public string Name { get; set; } = null!;
 
     [StringLength(100)]
+    public string? ComponentName { get; set; }
+
+    [StringLength(100)]
     public string Code { get; set; } = string.Empty;
 
     /// <summary>
     /// 1 = Earning, 2 = Deduction
     /// </summary>
     public short ItemType { get; set; }
+
+    public short? Type { get; set; }
 
     [Precision(18, 2)]
     public decimal Amount { get; set; }

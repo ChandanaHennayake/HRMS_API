@@ -205,17 +205,45 @@ WHERE p."PayrollRunId" = r."Id" AND (p."PeriodId" IS NULL OR p."PeriodId" = 0);
 
 -- PayslipItem
 ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "Name" character varying(100);
+ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "ComponentName" character varying(100);
 ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "Code" character varying(100) DEFAULT '';
 ALTER TABLE "PayslipItem" ALTER COLUMN "Code" TYPE character varying(100);
 ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "ItemType" smallint DEFAULT 1;
+ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "Type" smallint DEFAULT 1;
+ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "Amount" numeric(18,2) DEFAULT 0.0;
 ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "IsEpfApplicable" boolean DEFAULT false;
+ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "IsTaxable" boolean DEFAULT false;
 DO $$ 
 BEGIN 
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayslipItem' AND column_name = 'amount') THEN
+        UPDATE "PayslipItem" SET "Amount" = "amount" WHERE ("Amount" IS NULL OR "Amount" = 0) AND "amount" IS NOT NULL;
+    END IF;
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayslipItem' AND column_name = 'ComponentName') THEN
-        UPDATE "PayslipItem" SET "Name" = "ComponentName" WHERE "Name" IS NULL;
+        ALTER TABLE "PayslipItem" ALTER COLUMN "ComponentName" DROP NOT NULL;
+        ALTER TABLE "PayslipItem" ALTER COLUMN "ComponentName" SET DEFAULT '';
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayslipItem' AND column_name = 'Name') THEN
+        ALTER TABLE "PayslipItem" ALTER COLUMN "Name" DROP NOT NULL;
+        ALTER TABLE "PayslipItem" ALTER COLUMN "Name" SET DEFAULT '';
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayslipItem' AND column_name = 'Code') THEN
+        ALTER TABLE "PayslipItem" ALTER COLUMN "Code" DROP NOT NULL;
+        ALTER TABLE "PayslipItem" ALTER COLUMN "Code" SET DEFAULT '';
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayslipItem' AND column_name = 'ItemType') THEN
+        ALTER TABLE "PayslipItem" ALTER COLUMN "ItemType" DROP NOT NULL;
+        ALTER TABLE "PayslipItem" ALTER COLUMN "ItemType" SET DEFAULT 1;
     END IF;
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayslipItem' AND column_name = 'Type') THEN
-        UPDATE "PayslipItem" SET "ItemType" = "Type" WHERE "ItemType" IS NULL;
+        ALTER TABLE "PayslipItem" ALTER COLUMN "Type" DROP NOT NULL;
+        ALTER TABLE "PayslipItem" ALTER COLUMN "Type" SET DEFAULT 1;
     END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayslipItem' AND column_name = 'SalaryComponentId') THEN
+        ALTER TABLE "PayslipItem" ALTER COLUMN "SalaryComponentId" DROP NOT NULL;
+    END IF;
+    UPDATE "PayslipItem" SET "Name" = COALESCE("Name", "ComponentName", 'Item');
+    UPDATE "PayslipItem" SET "ComponentName" = COALESCE("ComponentName", "Name", 'Item');
+    UPDATE "PayslipItem" SET "ItemType" = COALESCE("ItemType", "Type", 1);
+    UPDATE "PayslipItem" SET "Type" = COALESCE("Type", "ItemType", 1);
 END $$;
 
