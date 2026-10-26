@@ -76,6 +76,7 @@ namespace HRMS.API.Service.Payroll
                     Year = request.Year,
                     Month = request.Month,
                     Name = periodName,
+                    PeriodName = periodName,
                     StartDate = startDate,
                     EndDate = endDate,
                     IsClosed = false,
@@ -673,6 +674,7 @@ namespace HRMS.API.Service.Payroll
                     Year = request.Year,
                     Month = request.Month,
                     Name = periodName,
+                    PeriodName = periodName,
                     StartDate = startDate,
                     EndDate = endDate,
                     IsClosed = false

@@ -19,8 +19,11 @@ public partial class PayrollPeriod
 
     public int Month { get; set; }
 
-    [StringLength(50)]
+    [StringLength(100)]
     public string Name { get; set; } = null!;
+
+    [StringLength(100)]
+    public string? PeriodName { get; set; }
 
     public DateOnly StartDate { get; set; }
 

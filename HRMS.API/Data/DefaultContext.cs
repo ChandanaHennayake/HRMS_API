@@ -434,6 +434,7 @@ public partial class DefaultContext : DbContext
             entity.ToTable("PayrollPeriod");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.PeriodName).HasMaxLength(100);
         });
 
         modelBuilder.Entity<PayrollRun>(entity =>

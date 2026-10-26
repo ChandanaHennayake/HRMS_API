@@ -71,15 +71,23 @@ ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""BankAccountNo"" charac
 ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""PaymentMode"" character varying(50) DEFAULT 'Bank Transfer';
 
 -- 3. PayrollPeriod Schema Reconciliation
-ALTER TABLE ""PayrollPeriod"" ADD COLUMN IF NOT EXISTS ""Year"" integer;
-ALTER TABLE ""PayrollPeriod"" ADD COLUMN IF NOT EXISTS ""Month"" integer;
-ALTER TABLE ""PayrollPeriod"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
-ALTER TABLE ""PayrollPeriod"" ADD COLUMN IF NOT EXISTS ""IsClosed"" boolean DEFAULT false;
+ALTER TABLE IF EXISTS ""PayrollPeriod"" ADD COLUMN IF NOT EXISTS ""Year"" integer;
+ALTER TABLE IF EXISTS ""PayrollPeriod"" ADD COLUMN IF NOT EXISTS ""Month"" integer;
+ALTER TABLE IF EXISTS ""PayrollPeriod"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
+ALTER TABLE IF EXISTS ""PayrollPeriod"" ADD COLUMN IF NOT EXISTS ""PeriodName"" character varying(100);
+ALTER TABLE IF EXISTS ""PayrollPeriod"" ADD COLUMN IF NOT EXISTS ""IsClosed"" boolean DEFAULT false;
 DO $$ 
 BEGIN 
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayrollPeriod' AND column_name = 'PeriodName') THEN
-        UPDATE ""PayrollPeriod"" SET ""Name"" = ""PeriodName"" WHERE ""Name"" IS NULL;
+        ALTER TABLE ""PayrollPeriod"" ALTER COLUMN ""PeriodName"" DROP NOT NULL;
+        ALTER TABLE ""PayrollPeriod"" ALTER COLUMN ""PeriodName"" SET DEFAULT '';
     END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayrollPeriod' AND column_name = 'Name') THEN
+        ALTER TABLE ""PayrollPeriod"" ALTER COLUMN ""Name"" DROP NOT NULL;
+        ALTER TABLE ""PayrollPeriod"" ALTER COLUMN ""Name"" SET DEFAULT '';
+    END IF;
+    UPDATE ""PayrollPeriod"" SET ""Name"" = COALESCE(""Name"", ""PeriodName"", 'Period');
+    UPDATE ""PayrollPeriod"" SET ""PeriodName"" = COALESCE(""PeriodName"", ""Name"", 'Period');
     UPDATE ""PayrollPeriod"" SET ""Year"" = EXTRACT(YEAR FROM ""StartDate"") WHERE ""Year"" IS NULL AND ""StartDate"" IS NOT NULL;
     UPDATE ""PayrollPeriod"" SET ""Month"" = EXTRACT(MONTH FROM ""StartDate"") WHERE ""Month"" IS NULL AND ""StartDate"" IS NOT NULL;
 END $$;
