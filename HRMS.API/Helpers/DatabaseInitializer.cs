@@ -29,41 +29,42 @@ ALTER TABLE IF EXISTS ""AppUser"" ADD COLUMN IF NOT EXISTS ""ClearPassword"" tex
 ALTER TABLE IF EXISTS ""AppUser"" ADD COLUMN IF NOT EXISTS ""IsDeleted"" boolean DEFAULT false;
 
 -- 1. Department / Designation / EmploymentType Aliases
+ALTER TABLE IF EXISTS ""Department"" ADD COLUMN IF NOT EXISTS ""DepartmentName"" character varying(100);
+ALTER TABLE IF EXISTS ""Department"" ADD COLUMN IF NOT EXISTS ""DepartmentCode"" character varying(50);
 ALTER TABLE IF EXISTS ""Department"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
 ALTER TABLE IF EXISTS ""Department"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(50);
 DO $$ 
 BEGIN 
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Department' AND column_name = 'DepartmentName') THEN
-        UPDATE ""Department"" SET ""Name"" = ""DepartmentName"" WHERE ""Name"" IS NULL;
-    END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Department' AND column_name = 'DepartmentCode') THEN
-        UPDATE ""Department"" SET ""Code"" = ""DepartmentCode"" WHERE ""Code"" IS NULL;
-    END IF;
+    UPDATE ""Department"" SET ""DepartmentName"" = COALESCE(""DepartmentName"", ""Name"");
+    UPDATE ""Department"" SET ""DepartmentCode"" = COALESCE(""DepartmentCode"", ""Code"");
+    UPDATE ""Department"" SET ""Name"" = COALESCE(""Name"", ""DepartmentName"");
+    UPDATE ""Department"" SET ""Code"" = COALESCE(""Code"", ""DepartmentCode"");
 END $$;
 
-ALTER TABLE ""Designation"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
-ALTER TABLE ""Designation"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(50);
+ALTER TABLE IF EXISTS ""Designation"" ADD COLUMN IF NOT EXISTS ""DesignationName"" character varying(100);
+ALTER TABLE IF EXISTS ""Designation"" ADD COLUMN IF NOT EXISTS ""DesignationCode"" character varying(50);
+ALTER TABLE IF EXISTS ""Designation"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
+ALTER TABLE IF EXISTS ""Designation"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(50);
 DO $$ 
 BEGIN 
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Designation' AND column_name = 'DesignationName') THEN
-        UPDATE ""Designation"" SET ""Name"" = ""DesignationName"" WHERE ""Name"" IS NULL;
-    END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Designation' AND column_name = 'DesignationCode') THEN
-        UPDATE ""Designation"" SET ""Code"" = ""DesignationCode"" WHERE ""Code"" IS NULL;
-    END IF;
+    UPDATE ""Designation"" SET ""DesignationName"" = COALESCE(""DesignationName"", ""Name"");
+    UPDATE ""Designation"" SET ""DesignationCode"" = COALESCE(""DesignationCode"", ""Code"");
+    UPDATE ""Designation"" SET ""Name"" = COALESCE(""Name"", ""DesignationName"");
+    UPDATE ""Designation"" SET ""Code"" = COALESCE(""Code"", ""DesignationCode"");
 END $$;
 
-ALTER TABLE ""EmploymentType"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
-ALTER TABLE ""EmploymentType"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(50);
+ALTER TABLE IF EXISTS ""EmploymentType"" ADD COLUMN IF NOT EXISTS ""TypeName"" character varying(100);
+ALTER TABLE IF EXISTS ""EmploymentType"" ADD COLUMN IF NOT EXISTS ""TypeCode"" character varying(50);
+ALTER TABLE IF EXISTS ""EmploymentType"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
+ALTER TABLE IF EXISTS ""EmploymentType"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(50);
 DO $$ 
 BEGIN 
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'EmploymentType' AND column_name = 'TypeName') THEN
-        UPDATE ""EmploymentType"" SET ""Name"" = ""TypeName"" WHERE ""Name"" IS NULL;
-    END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'EmploymentType' AND column_name = 'TypeCode') THEN
-        UPDATE ""EmploymentType"" SET ""Code"" = ""TypeCode"" WHERE ""Code"" IS NULL;
-    END IF;
+    UPDATE ""EmploymentType"" SET ""TypeName"" = COALESCE(""TypeName"", ""Name"");
+    UPDATE ""EmploymentType"" SET ""TypeCode"" = COALESCE(""TypeCode"", ""Code"");
+    UPDATE ""EmploymentType"" SET ""Name"" = COALESCE(""Name"", ""TypeName"");
+    UPDATE ""EmploymentType"" SET ""Code"" = COALESCE(""Code"", ""TypeCode"");
 END $$;
+
 
 -- 2. EmployeeSalary Bank Details
 ALTER TABLE ""EmployeeSalary"" ADD COLUMN IF NOT EXISTS ""BankAccountNo"" character varying(50);
@@ -137,13 +138,14 @@ FROM ""PayrollRun"" r
 WHERE p.""PayrollRunId"" = r.""Id"" AND (p.""PeriodId"" IS NULL OR p.""PeriodId"" = 0);
 
 -- 6. PayslipItem Schema Reconciliation
-ALTER TABLE ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""PayslipId"" bigint;
-ALTER TABLE ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
-ALTER TABLE ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(30) DEFAULT '';
-ALTER TABLE ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""ItemType"" smallint DEFAULT 1;
-ALTER TABLE ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""Amount"" numeric(18,2) DEFAULT 0.0;
-ALTER TABLE ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""IsEpfApplicable"" boolean DEFAULT false;
-ALTER TABLE ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""IsTaxable"" boolean DEFAULT false;
+ALTER TABLE IF EXISTS ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""PayslipId"" bigint;
+ALTER TABLE IF EXISTS ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""Name"" character varying(100);
+ALTER TABLE IF EXISTS ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""Code"" character varying(100) DEFAULT '';
+ALTER TABLE IF EXISTS ""PayslipItem"" ALTER COLUMN ""Code"" TYPE character varying(100);
+ALTER TABLE IF EXISTS ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""ItemType"" smallint DEFAULT 1;
+ALTER TABLE IF EXISTS ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""Amount"" numeric(18,2) DEFAULT 0.0;
+ALTER TABLE IF EXISTS ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""IsEpfApplicable"" boolean DEFAULT false;
+ALTER TABLE IF EXISTS ""PayslipItem"" ADD COLUMN IF NOT EXISTS ""IsTaxable"" boolean DEFAULT false;
 DO $$ 
 BEGIN 
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'PayslipItem' AND column_name = 'amount') THEN

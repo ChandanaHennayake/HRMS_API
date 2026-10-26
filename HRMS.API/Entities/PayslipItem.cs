@@ -16,7 +16,7 @@ public partial class PayslipItem
     [StringLength(100)]
     public string Name { get; set; } = null!;
 
-    [StringLength(30)]
+    [StringLength(100)]
     public string Code { get; set; } = string.Empty;
 
     /// <summary>

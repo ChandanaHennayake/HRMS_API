@@ -277,10 +277,14 @@ namespace HRMS.API.Controllers
             }
             catch (Exception ex)
             {
+                var fullMessage = ex.InnerException != null
+                    ? $"{ex.Message} --> {ex.InnerException.Message}"
+                    : ex.Message;
+
                 return BadRequest(new
                 {
                     success = false,
-                    message = ex.Message
+                    message = fullMessage
                 });
             }
         }

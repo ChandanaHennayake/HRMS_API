@@ -795,11 +795,15 @@ namespace HRMS.API.Service.Payroll
             {
                 foreach (var al in request.Allowances.Where(x => x.Amount > 0))
                 {
+                    var code = string.IsNullOrWhiteSpace(al.Name) ? "ALLOWANCE" : al.Name.Replace(" ", "_").ToUpper().Trim();
+                    if (code.Length > 30) code = code.Substring(0, 30);
+                    var name = al.Name.Length > 100 ? al.Name.Substring(0, 100) : al.Name;
+
                     itemsToAdd.Add(new PayslipItem
                     {
                         PayslipId = payslip.Id,
-                        Name = al.Name,
-                        Code = al.Name.Replace(" ", "_").ToUpper(),
+                        Name = name,
+                        Code = code,
                         ItemType = 1, // Earning
                         Amount = al.Amount,
                         IsEpfApplicable = al.IsEpfApplicable,
@@ -812,11 +816,15 @@ namespace HRMS.API.Service.Payroll
             {
                 foreach (var de in request.Deductions.Where(x => x.Amount > 0))
                 {
+                    var code = string.IsNullOrWhiteSpace(de.Name) ? "DEDUCTION" : de.Name.Replace(" ", "_").ToUpper().Trim();
+                    if (code.Length > 30) code = code.Substring(0, 30);
+                    var name = de.Name.Length > 100 ? de.Name.Substring(0, 100) : de.Name;
+
                     itemsToAdd.Add(new PayslipItem
                     {
                         PayslipId = payslip.Id,
-                        Name = de.Name,
-                        Code = de.Name.Replace(" ", "_").ToUpper(),
+                        Name = name,
+                        Code = code,
                         ItemType = 2, // Deduction
                         Amount = de.Amount,
                         IsEpfApplicable = false,
@@ -827,10 +835,13 @@ namespace HRMS.API.Service.Payroll
 
             if (noPayDeduction > 0)
             {
+                var name = $"No-Pay Deduction ({request.NoPayDays:0.#} days @ {request.PerDayRate:0.00}/day)";
+                if (name.Length > 100) name = name.Substring(0, 100);
+
                 itemsToAdd.Add(new PayslipItem
                 {
                     PayslipId = payslip.Id,
-                    Name = $"No-Pay Deduction ({request.NoPayDays:0.#} days @ {request.PerDayRate:0.00}/day)",
+                    Name = name,
                     Code = "NO_PAY",
                     ItemType = 2,
                     Amount = noPayDeduction,
@@ -841,10 +852,13 @@ namespace HRMS.API.Service.Payroll
 
             if (employeeEpf > 0)
             {
+                var name = $"EPF Employee ({request.EmployeeEpfRate}%)";
+                if (name.Length > 100) name = name.Substring(0, 100);
+
                 itemsToAdd.Add(new PayslipItem
                 {
                     PayslipId = payslip.Id,
-                    Name = $"EPF Employee ({request.EmployeeEpfRate}%)",
+                    Name = name,
                     Code = "EPF_EMP",
                     ItemType = 2,
                     Amount = employeeEpf,

@@ -3,20 +3,32 @@
 -- ============================================================================
 
 -- 1. Ensure both column conventions exist for Department, Designation, and EmploymentType
+ALTER TABLE "Department" ADD COLUMN IF NOT EXISTS "DepartmentName" character varying(100);
+ALTER TABLE "Department" ADD COLUMN IF NOT EXISTS "DepartmentCode" character varying(50);
 ALTER TABLE "Department" ADD COLUMN IF NOT EXISTS "Name" character varying(100);
-UPDATE "Department" SET "Name" = "DepartmentName" WHERE "Name" IS NULL;
 ALTER TABLE "Department" ADD COLUMN IF NOT EXISTS "Code" character varying(50);
-UPDATE "Department" SET "Code" = "DepartmentCode" WHERE "Code" IS NULL;
+UPDATE "Department" SET "DepartmentName" = COALESCE("DepartmentName", "Name");
+UPDATE "Department" SET "DepartmentCode" = COALESCE("DepartmentCode", "Code");
+UPDATE "Department" SET "Name" = COALESCE("Name", "DepartmentName");
+UPDATE "Department" SET "Code" = COALESCE("Code", "DepartmentCode");
 
+ALTER TABLE "Designation" ADD COLUMN IF NOT EXISTS "DesignationName" character varying(100);
+ALTER TABLE "Designation" ADD COLUMN IF NOT EXISTS "DesignationCode" character varying(50);
 ALTER TABLE "Designation" ADD COLUMN IF NOT EXISTS "Name" character varying(100);
-UPDATE "Designation" SET "Name" = "DesignationName" WHERE "Name" IS NULL;
 ALTER TABLE "Designation" ADD COLUMN IF NOT EXISTS "Code" character varying(50);
-UPDATE "Designation" SET "Code" = "DesignationCode" WHERE "Code" IS NULL;
+UPDATE "Designation" SET "DesignationName" = COALESCE("DesignationName", "Name");
+UPDATE "Designation" SET "DesignationCode" = COALESCE("DesignationCode", "Code");
+UPDATE "Designation" SET "Name" = COALESCE("Name", "DesignationName");
+UPDATE "Designation" SET "Code" = COALESCE("Code", "DesignationCode");
 
+ALTER TABLE "EmploymentType" ADD COLUMN IF NOT EXISTS "TypeName" character varying(100);
+ALTER TABLE "EmploymentType" ADD COLUMN IF NOT EXISTS "TypeCode" character varying(50);
 ALTER TABLE "EmploymentType" ADD COLUMN IF NOT EXISTS "Name" character varying(100);
-UPDATE "EmploymentType" SET "Name" = "TypeName" WHERE "Name" IS NULL;
 ALTER TABLE "EmploymentType" ADD COLUMN IF NOT EXISTS "Code" character varying(50);
-UPDATE "EmploymentType" SET "Code" = "TypeCode" WHERE "Code" IS NULL;
+UPDATE "EmploymentType" SET "TypeName" = COALESCE("TypeName", "Name");
+UPDATE "EmploymentType" SET "TypeCode" = COALESCE("TypeCode", "Code");
+UPDATE "EmploymentType" SET "Name" = COALESCE("Name", "TypeName");
+UPDATE "EmploymentType" SET "Code" = COALESCE("Code", "TypeCode");
 
 -- 1b. Ensure EmployeeSalary BankAccountNo and PaymentMode exist
 ALTER TABLE "EmployeeSalary" ADD COLUMN IF NOT EXISTS "BankAccountNo" character varying(50);
@@ -151,7 +163,8 @@ WHERE p."PayrollRunId" = r."Id" AND (p."PeriodId" IS NULL OR p."PeriodId" = 0);
 
 -- PayslipItem
 ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "Name" character varying(100);
-ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "Code" character varying(30) DEFAULT '';
+ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "Code" character varying(100) DEFAULT '';
+ALTER TABLE "PayslipItem" ALTER COLUMN "Code" TYPE character varying(100);
 ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "ItemType" smallint DEFAULT 1;
 ALTER TABLE "PayslipItem" ADD COLUMN IF NOT EXISTS "IsEpfApplicable" boolean DEFAULT false;
 DO $$ 
